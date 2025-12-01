@@ -76,6 +76,7 @@ export class LLMExtension extends BaseBotExtension {
                     let function_arguments = JSON.parse(tool_call.function.arguments)
                     //Добавляем класс бота в аргументы функции
                     function_arguments.bot = this.bot;
+                    this.bot.mineflayerBot!.chat("Calling function: " + function_name + " with arguments: " + tool_call.function.arguments)
 
                     const function_result = await LLMFunctions.invokeFunction(function_name, function_arguments)
 
