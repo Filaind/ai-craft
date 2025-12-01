@@ -45,6 +45,7 @@ LLMFunctions.register({
 
 LLMFunctions.register({
     name: "attack entity",
+    description: "You can use this function to attack an entity or mobs for farm or other purposes",
     parameters: {
         type: "object",
         properties: {
