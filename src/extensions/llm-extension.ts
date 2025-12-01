@@ -42,6 +42,7 @@ export class LLMExtension extends BaseBotExtension {
     //Удаляем из памяти сообщения о функциях get nearby entities. Иначе он будет старые сообщения о позициях объектов юзать.
     tidyMemory() {
         this.messages = this.messages.filter((message) => message.tool_name != "get nearby entities");
+        this.messages = this.messages.filter((message) => message.tool_name != "show inventory");
     }
 
 
@@ -76,7 +77,7 @@ export class LLMExtension extends BaseBotExtension {
                     //Добавляем класс бота в аргументы функции
                     function_arguments.bot = this.bot;
 
-                    const function_result = LLMFunctions.invokeFunction(function_name, function_arguments)
+                    const function_result = await LLMFunctions.invokeFunction(function_name, function_arguments)
 
                     this.messages.push({
                         role: "tool",
