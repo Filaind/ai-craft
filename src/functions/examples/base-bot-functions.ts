@@ -20,6 +20,7 @@ export function getNearbyEntities(bot: Bot, maxDistance = 16) {
 
 LLMFunctions.register({
     name: "Walk to position",
+    description: "Before calling this function, you must call the function 'get nearby entities' to get the position of the entity you want to walk to",
     parameters: {
         type: "object",
         properties: {
@@ -45,11 +46,19 @@ LLMFunctions.register({
     parameters: {
         type: "object",
         properties: {
-            maxDistance: { type: "number", description: "Increrease value if you don't see the entity", default: 16 }
+            type: { type: "string", enum: ["player", "mob"] },
+            maxDistance: { type: "number"}
         }
     },
-    function: (args: { bot: Bot, maxDistance: number }) => {
-        return getNearbyEntities(args.bot, args.maxDistance)
+    function: (args: { bot: Bot, type: "player" | "mob", maxDistance: number }) => {
+        let entities = getNearbyEntities(args.bot, args.maxDistance)
+        if(args.type) {
+            entities = entities.filter((entity) => entity!.type === args.type)
+        }
+        if(entities.length === 0) {
+            return "No entities found. Increase the max distance."
+        }
+        return entities
     },
     strict: true,
     type: 'function'
