@@ -36,8 +36,6 @@ export class Bot {
         this.mineflayerBot.on('kicked', console.log)
         this.mineflayerBot.on('error', console.log)
 
-        this.mineflayerBot.on('goal_reached', this.onGoalReached.bind(this))
-
         //@ts-ignore
         this.mineflayerBot.on('stoppedAttacking', this.onStoppedAttacking.bind(this))
     }
@@ -69,13 +67,6 @@ export class Bot {
 
     }
 
-
-
-    async onGoalReached() {
-        console.log("Goal reached")
-        const response = await this.llm.getResponse("Goal reached!")
-        this.mineflayerBot!.chat("%" + response)
-    }
 
     async onStoppedAttacking(entity: any) {
         const response = await this.llm.getResponse("End attacking")

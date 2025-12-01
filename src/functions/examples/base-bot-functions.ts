@@ -29,14 +29,25 @@ LLMFunctions.register({
             z: { type: "number" }
         }
     },
-    function: (args: { bot: Bot, x: number, y: number, z: number }) => {
-        const defaultMove = new Movements(args.bot.mineflayerBot!)
-        args.bot.mineflayerBot!.pathfinder.setMovements(defaultMove)
-        args.bot.mineflayerBot!.pathfinder.setGoal(new goals.GoalNear(args.x, args.y, args.z, 1))
+    function: async (args: { bot: Bot, x: number, y: number, z: number }) => {
+
+        const promise = new Promise((resolve, reject) => {
+
+            args.bot.mineflayerBot!.once('goal_reached', () => {
+                console.log("Goal reached")
+                resolve(true)
+            })
+
+
+            const defaultMove = new Movements(args.bot.mineflayerBot!)
+            args.bot.mineflayerBot!.pathfinder.setMovements(defaultMove)
+            args.bot.mineflayerBot!.pathfinder.setGoal(new goals.GoalNear(args.x, args.y, args.z, 1))
+        })
+
+        await promise
 
         return {
-            message: "Walking to position",
-            stop_calling: true
+            message: "Goal reached",
         }
     },
     strict: true,
@@ -55,7 +66,7 @@ LLMFunctions.register({
     function: (args: { bot: Bot, entity_id: number }) => {
         let entities = getNearbyEntities(args.bot, 1000)
         entities = entities.filter((entity) => entity!.id === args.entity_id)
-        if(entities.length === 0) {
+        if (entities.length === 0) {
             return "Entity not found"
         }
         args.bot.mineflayerBot!.pvp.attack(entities[0]!)
@@ -75,15 +86,15 @@ LLMFunctions.register({
         type: "object",
         properties: {
             //type: { type: "string", enum: ["player", "mob"] },
-            maxDistance: { type: "number", description: "Max allowed distance 1000"}
+            maxDistance: { type: "number", description: "Max allowed distance 1000" }
         }
     },
-    function: (args: { bot: Bot,  maxDistance: number }) => {
+    function: (args: { bot: Bot, maxDistance: number }) => {
         let entities = getNearbyEntities(args.bot, args.maxDistance)
         // if(args.type) {
         //     entities = entities.filter((entity) => entity!.type === args.type)
         // }
-        if(entities.length === 0) {
+        if (entities.length === 0) {
             return "No entities found. Increase the max distance."
         }
         return entities.map((entity) => {
