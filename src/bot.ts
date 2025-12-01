@@ -1,35 +1,46 @@
 import mineflayer, { type BotOptions } from 'mineflayer'
 import { pathfinder } from 'mineflayer-pathfinder';
+import { LLM } from './llm';
+import OpenAI from 'openai';
 
+export class BotExtension {
+    protected bot: Bot;
+
+    constructor(bot: Bot) {
+        this.bot = bot;
+    }
+}
 
 
 export class Bot {
-    private bot?: mineflayer.Bot;
+    private mineflayerBot?: mineflayer.Bot;
+    private llm: LLM;
 
-    constructor(options: BotOptions) {
+    constructor(options: BotOptions, llmClient: OpenAI) {
+        this.llm = new LLM(this, llmClient);
         this.start(options)
     }
 
     async start(options: BotOptions) {
 
-        this.bot = mineflayer.createBot({
+        this.mineflayerBot = mineflayer.createBot({
             ...options,
         })
 
-        this.bot.loadPlugin(pathfinder)
+        this.mineflayerBot.loadPlugin(pathfinder)
 
-        this.bot.on('chat', (username: string, message: string) => {
-            if (username === this.bot!.username) return
-            this.bot!.chat(message)
+        this.mineflayerBot.on('chat', (username: string, message: string) => {
+            if (username === this.mineflayerBot!.username) return
+            this.mineflayerBot!.chat(message)
         })
 
         // Log errors and kick reasons:
-        this.bot.on('kicked', console.log)
-        this.bot.on('error', console.log)
+        this.mineflayerBot.on('kicked', console.log)
+        this.mineflayerBot.on('error', console.log)
     }
 
 
-    async llmProcess() {
-        
+    async process() {
+
     }
 }

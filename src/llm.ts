@@ -1,25 +1,20 @@
 import OpenAI from "openai";
 import { LLMFunctions } from "./functions/llm-functions";
 import type { ChatCompletionMessageParam } from "openai/resources";
+import { BotExtension } from "./bot";
+import { Bot } from "./bot";
 
-const client = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY || "",
-    baseURL: "http://192.168.1.204:1234/v1",
-});
-
-await LLMFunctions.registerAllFunctions();
-
-
-class LLM {
+export class LLM extends BotExtension {
     private client: OpenAI;
     private messages: ChatCompletionMessageParam[] = [];
 
-    constructor(client: OpenAI) {
+    constructor(bot: Bot, client: OpenAI) {
+        super(bot);
         this.client = client;
     }
 
     async getResponse(): Promise<string> {
-        const response = await client.chat.completions.create({
+        const response = await this.client.chat.completions.create({
             model: "qwen/qwen3-coder-30b",
             tool_choice: "auto",
             tools: LLMFunctions.getFunctionList() as any,
@@ -38,7 +33,7 @@ class LLM {
                     const function_name = tool_call.function.name
                     const function_arguments = JSON.parse(tool_call.function.arguments)
                     const function_result = LLMFunctions.invokeFunction(function_name, function_arguments)
-                    
+
                     this.messages.push({
                         role: "tool",
                         tool_call_id: tool_call.id,
