@@ -12,6 +12,7 @@ type ChatMessage = ChatCompletionMessageParam & {
 export class LLMExtension extends BaseBotExtension {
     private client: OpenAI;
     private messages: ChatMessage[] = [];
+    private functionCallHistory: string[] = [];
 
 
     public systemMessage: string = "You are a minecraft player. Just play the game and help other players. Use tools to interact with the game.";
@@ -43,6 +44,8 @@ export class LLMExtension extends BaseBotExtension {
     tidyMemory() {
         this.messages = this.messages.filter((message) => message.tool_name != "get_nearby_entities");
         this.messages = this.messages.filter((message) => message.tool_name != "show_inventory");
+        //Очищаем историю вызовов функций
+        this.functionCallHistory = [];
     }
 
 
@@ -54,12 +57,26 @@ export class LLMExtension extends BaseBotExtension {
             })
         }
 
+        const inventory = this.bot.mineflayerBot!.inventory.items().map((item) => {
+            return {
+                name: item.name,
+                count: item.count,
+                type: item.type
+            }
+        })
+
         console.log('LLM request');
         const response = await this.client.chat.completions.create({
             model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
             tool_choice: "auto",
             tools: LLMFunctions.getFunctionList() as any,
-            messages: this.messages,
+            messages: [
+                {
+                    role: "user",
+                    content: "Your inventory: " + JSON.stringify(inventory)
+                },
+                ...this.messages
+            ],
         });
 
         const choice = response.choices[0]!
@@ -73,19 +90,38 @@ export class LLMExtension extends BaseBotExtension {
 
                     const function_name = tool_call.function.name
 
+                    //Проверка на 3 подряд вызова одной функции
+                    if (this.functionCallHistory.length >= 2 &&
+                        this.functionCallHistory[this.functionCallHistory.length - 1] === function_name &&
+                        this.functionCallHistory[this.functionCallHistory.length - 2] === function_name) {
+                        console.log(`Penalty: Function ${function_name} called 3 times in a row, skipping`)
+                        this.messages.push({
+                            role: "assistant",
+                            content: `I can't call ${function_name} again, it's been called 3 times in a row`
+                        })
+                        continue
+                    }
+
                     let function_arguments = JSON.parse(tool_call.function.arguments)
                     //Добавляем класс бота в аргументы функции
                     function_arguments.bot = this.bot;
- //                   this.bot.mineflayerBot!.chat("Calling function: " + function_name + " with arguments: " + tool_call.function.arguments)
+                    //                   this.bot.mineflayerBot!.chat("Calling function: " + function_name + " with arguments: " + tool_call.function.arguments)
 
                     const function_result = await LLMFunctions.invokeFunction(function_name, function_arguments)
-                    
+
                     this.messages.push({
                         role: "tool",
                         tool_call_id: tool_call.id,
                         tool_name: function_name,
                         content: JSON.stringify(function_result)
                     })
+
+                    //Добавляем функцию в историю вызовов
+                    this.functionCallHistory.push(function_name)
+                    //Ограничиваем историю последними 3 вызовами
+                    if (this.functionCallHistory.length > 3) {
+                        this.functionCallHistory.shift()
+                    }
 
                     this.saveMemory();
 

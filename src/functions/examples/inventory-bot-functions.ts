@@ -43,24 +43,24 @@ export async function giveToPlayer(bot: Bot, itemType: string, entity: Entity, n
     return `Failed to give ${itemType} to ${entity.username}, it was never received.`;
 }
 
-LLMFunctions.register({
-    name: "show_inventory",
-    parameters: {
-        type: "object",
-        properties: {}
-    },
-    function: (args: { bot: Bot }) => {
-        return args.bot.mineflayerBot!.inventory.items().map((item) => {
-            return {
-                name: item.name,
-                count: item.count,
-                type: item.type
-            }
-        })
-    },
-    strict: true,
-    type: 'function'
-})
+// LLMFunctions.register({
+//     name: "show_inventory",
+//     parameters: {
+//         type: "object",
+//         properties: {}
+//     },
+//     function: (args: { bot: Bot }) => {
+//         return args.bot.mineflayerBot!.inventory.items().map((item) => {
+//             return {
+//                 name: item.name,
+//                 count: item.count,
+//                 type: item.type
+//             }
+//         })
+//     },
+//     strict: true,
+//     type: 'function'
+// })
 
 LLMFunctions.register({
     name: "give_item_to_entity",
