@@ -1,8 +1,10 @@
 import mineflayer, { type BotOptions } from 'mineflayer'
 import { pathfinder } from 'mineflayer-pathfinder';
+import * as pvp from 'mineflayer-pvp';
 import { LLMExtension } from './extensions/llm-extension';
 import OpenAI from 'openai';
 import fs from 'fs';
+import type { Entity } from 'prismarine-entity';
 
 export class Bot {
     public mineflayerBot?: mineflayer.Bot;
@@ -23,6 +25,7 @@ export class Bot {
         })
 
         this.mineflayerBot.loadPlugin(pathfinder)
+        this.mineflayerBot.loadPlugin(pvp.plugin)
 
         this.mineflayerBot.on('spawn', this.onSpawn.bind(this))
         this.mineflayerBot.on('chat', this.onChatMessage.bind(this))
@@ -32,6 +35,9 @@ export class Bot {
         this.mineflayerBot.on('error', console.log)
 
         this.mineflayerBot.on('goal_reached', this.onGoalReached.bind(this))
+
+        //@ts-ignore
+        this.mineflayerBot.on('stoppedAttacking', this.onStoppedAttacking.bind(this))
     }
 
     getBotDataPath() {
@@ -49,12 +55,6 @@ export class Bot {
     }
 
 
-    async onGoalReached() {
-        console.log("Goal reached")
-        const response = await this.llm.getResponse("Goal reached!")
-        this.mineflayerBot!.chat(response)
-    }
-
     async onChatMessage(username: string, message: string) {
         console.log('onChatMessage', username, message);
 
@@ -65,5 +65,18 @@ export class Bot {
 
         this.mineflayerBot!.chat(response)
 
+    }
+
+
+
+    async onGoalReached() {
+        console.log("Goal reached")
+        const response = await this.llm.getResponse("Goal reached!")
+        this.mineflayerBot!.chat(response)
+    }
+
+    async onStoppedAttacking(entity: any) {
+        const response = await this.llm.getResponse("End attacking")
+        this.mineflayerBot!.chat(response)
     }
 }

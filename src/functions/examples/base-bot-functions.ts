@@ -44,6 +44,30 @@ LLMFunctions.register({
 })
 
 LLMFunctions.register({
+    name: "attack entity",
+    parameters: {
+        type: "object",
+        properties: {
+            entity_id: { type: "number", description: "The id of the entity to attack" }
+        }
+    },
+    function: (args: { bot: Bot, entity_id: number }) => {
+        let entities = getNearbyEntities(args.bot, 1000)
+        entities = entities.filter((entity) => entity!.id === args.entity_id)
+        if(entities.length === 0) {
+            return "Entity not found"
+        }
+        args.bot.mineflayerBot!.pvp.attack(entities[0]!)
+        return {
+            message: "Attacking entity",
+            stop_calling: true
+        }
+    },
+    strict: true,
+    type: 'function'
+})
+
+LLMFunctions.register({
     name: "get nearby entities",
     description: "Get all entities nearby the bot",
     parameters: {
@@ -63,6 +87,7 @@ LLMFunctions.register({
         }
         return entities.map((entity) => {
             return {
+                id: entity!.id,
                 name: entity!.name,
                 type: entity!.type,
                 username: entity!.username,
