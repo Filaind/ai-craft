@@ -5,7 +5,7 @@ import OpenAI from 'openai';
 import fs from 'fs';
 
 export class Bot {
-    private mineflayerBot?: mineflayer.Bot;
+    public mineflayerBot?: mineflayer.Bot;
     private llm: LLMExtension;
 
     private static BOT_DATA_PATH: string = 'bots-data';
@@ -40,6 +40,10 @@ export class Bot {
         fs.mkdirSync(this.getBotDataPath(), { recursive: true });
 
         console.log("Bot spawned", this.mineflayerBot!.username);
+        const entity = this.mineflayerBot!.nearestEntity()
+        if (entity) {
+            console.log("Nearest entity", entity.name);
+        }
     }
 
 
