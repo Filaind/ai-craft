@@ -4,7 +4,7 @@ import { LLMFunctions } from "./src/functions/llm-functions";
 
 const client = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY || "",
-    baseURL: process.env.BASE_URL || "",
+    baseURL: process.env.LLM_BASE_URL || "",
 });
 
 await LLMFunctions.registerFunctions('./src/functions/examples');
