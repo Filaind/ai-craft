@@ -4,15 +4,15 @@ import { LLMFunctions } from "./src/functions/llm-functions";
 
 const client = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY || "",
-    baseURL: "http://192.168.1.204:1234/v1",
+    baseURL: process.env.BASE_URL || "",
 });
 
 await LLMFunctions.registerFunctions('./src/functions/examples');
 
 
 const bot = new Bot({
-    host: 'localhost',
-    username: 'Bot',
+    host: process.env.SERVER_HOST || 'localhost',
+    username: process.env.BOT_USERNAME || 'Bot',
     auth: 'offline',
-    port: 25565,
+    port: parseInt(process.env.SERVER_PORT || '25565'),
 }, client);

@@ -56,7 +56,7 @@ export class LLMExtension extends BaseBotExtension {
 
         console.log('LLM request');
         const response = await this.client.chat.completions.create({
-            model: "openai/gpt-oss-20b",
+            model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
             tool_choice: "auto",
             tools: LLMFunctions.getFunctionList() as any,
             messages: this.messages
