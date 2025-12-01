@@ -62,7 +62,11 @@ export class LLMExtension extends BaseBotExtension {
                     console.log(tool_call)
 
                     const function_name = tool_call.function.name
-                    const function_arguments = JSON.parse(tool_call.function.arguments)
+
+                    let function_arguments = JSON.parse(tool_call.function.arguments)
+                    //Добавляем класс бота в аргументы функции
+                    function_arguments.bot = this.bot;
+
                     const function_result = LLMFunctions.invokeFunction(function_name, function_arguments)
 
                     this.messages.push({
