@@ -50,7 +50,8 @@ export class Bot {
 
 
     async onGoalReached() {
-        await this.llm.getResponse("Goal reached!")
+        const response = await this.llm.getResponse("Goal reached!")
+        this.mineflayerBot!.chat(response)
     }
 
     async onChatMessage(username: string, message: string) {
@@ -59,6 +60,9 @@ export class Bot {
         //Игнорируем сообщения от бота
         if (username === this.mineflayerBot!.username) return
 
-        await this.llm.getResponse(message)
+        const response = await this.llm.getResponse(message)
+
+        this.mineflayerBot!.chat(response)
+
     }
 }
