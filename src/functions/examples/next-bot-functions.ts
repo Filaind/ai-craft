@@ -3,6 +3,8 @@ import { Movements } from "mineflayer-pathfinder";
 import type { Block } from "prismarine-block";
 import { LLMFunctions } from "../llm-functions";
 import { getNearbyEntities } from "./base-bot-functions";
+import type { Bot as MineflayerBot } from "mineflayer";
+import 'ses';
 
 export function getNearestBlocksWhere(bot: Bot, predicate: (block: Block) => boolean, distance=8, count=10000) {
     const mineflayerBot = bot.mineflayerBot!;
@@ -109,6 +111,50 @@ LLMFunctions.register({
     function: async (args: { bot: Bot, block_type: string, num: number }) => {
         const res = await collectBlock(args.bot, args.block_type, args.num);
         return "Collected " + args.block_type + " blocks";
+    },
+    strict: true,
+    type: 'function'
+})  
+
+
+export const makeCompartment = (endowments = {}) => {
+    return new Compartment({
+      // provide untamed Math, Date, etc
+      Math,
+      Date,
+      // standard endowments
+      ...endowments
+    });
+  }
+
+const exampleCode = `
+await bot.chat('Hello, world!');
+
+/* CODE HERE */
+
+`;
+
+LLMFunctions.register({
+    name: "execute_mineflayer_code",
+    description: "Execute mineflayer JS code for complex tasks. USE THIS EXAMPLE CODE AS A GUIDE: " + exampleCode,
+    parameters: {
+        type: "object",
+        properties: {
+            code: { type: "string"}
+        }
+    },
+    function: async (args: { bot: Bot, code: string }) => {
+
+        console.log("Executing code: " + args.code);
+        
+        const mineflayerBot = args.bot.mineflayerBot;
+        const func = makeCompartment().evaluate(`(async (bot) => {
+            ${args.code}
+        })`);
+
+        await func(mineflayerBot!);
+
+        return "Success: Code executed";
     },
     strict: true,
     type: 'function'
