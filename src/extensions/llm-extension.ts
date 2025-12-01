@@ -8,19 +8,31 @@ import fs from 'fs';
 export class LLMExtension extends BaseBotExtension {
     private client: OpenAI;
     private messages: ChatCompletionMessageParam[] = [];
-    
 
-    public systemMessage: string = "You are a helpful assistant that can help with Minecraft tasks.";
+
+    public systemMessage: string = "You are a minecraft bot player. Just play the game and help other players.";
 
     constructor(bot: Bot, client: OpenAI) {
         super(bot);
         this.client = client;
 
+        this.messages.push({
+            role: "system",
+            content: this.systemMessage
+        })
+
+        //this.loadMemory();
 
     }
 
+    loadMemory() {
+        if (fs.existsSync(`${this.bot.getBotDataPath()}/memory.json`)) {
+            this.messages = JSON.parse(fs.readFileSync(`${this.bot.getBotDataPath()}/memory.json`, 'utf8'));
+        }
+    }
+
     saveMemory() {
-        fs.writeFileSync('memory.json', JSON.stringify(this.messages, null, 2));
+        fs.writeFileSync(`${this.bot.getBotDataPath()}/memory.json`, JSON.stringify(this.messages, null, 2));
     }
 
 
@@ -58,6 +70,8 @@ export class LLMExtension extends BaseBotExtension {
                         tool_call_id: tool_call.id,
                         content: JSON.stringify(function_result)
                     })
+
+                    this.saveMemory();
                 }
             })
             //Рекурсивно вызываем дальше для получения следующего ответа
@@ -68,6 +82,7 @@ export class LLMExtension extends BaseBotExtension {
                 role: "assistant",
                 content: choice.message.content!
             })
+            this.saveMemory();
             //Если нет tool calls, то возвращаем ответ
             return choice.message.content!
         }
