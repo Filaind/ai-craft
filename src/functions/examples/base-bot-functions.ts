@@ -61,7 +61,14 @@ LLMFunctions.register({
         if(entities.length === 0) {
             return "No entities found. Increase the max distance."
         }
-        return entities
+        return entities.map((entity) => {
+            return {
+                name: entity!.name,
+                type: entity!.type,
+                username: entity!.username,
+                position: entity!.position
+            }
+        })
     },
     strict: true,
     type: 'function'

@@ -5,9 +5,13 @@ import { BaseBotExtension } from "./base-bot-extension";
 import type { Bot } from "../bot";
 import fs from 'fs';
 
+type ChatMessage = ChatCompletionMessageParam & {
+    tool_name?: string;
+}
+
 export class LLMExtension extends BaseBotExtension {
     private client: OpenAI;
-    private messages: ChatCompletionMessageParam[] = [];
+    private messages: ChatMessage[] = [];
 
 
     public systemMessage: string = "You are a minecraft bot player. Just play the game and help other players. Use tools to interact with the game.";
@@ -35,6 +39,11 @@ export class LLMExtension extends BaseBotExtension {
         fs.writeFileSync(`${this.bot.getBotDataPath()}/memory.json`, JSON.stringify(this.messages, null, 2));
     }
 
+    //Удаляем из памяти сообщения о функциях get nearby entities. Иначе он будет старые сообщения о позициях объектов юзать.
+    tidyMemory() {
+        this.messages = this.messages.filter((message) => message.tool_name != "get nearby entities");
+    }
+
 
     async getResponse(newMessage?: string): Promise<string> {
         if (newMessage) {
@@ -46,7 +55,7 @@ export class LLMExtension extends BaseBotExtension {
 
         console.log('LLM request');
         const response = await this.client.chat.completions.create({
-            model: "qwen/qwen3-coder-30b",
+            model: "openai/gpt-oss-20b",
             tool_choice: "auto",
             tools: LLMFunctions.getFunctionList() as any,
             messages: this.messages
@@ -72,12 +81,11 @@ export class LLMExtension extends BaseBotExtension {
                     this.messages.push({
                         role: "tool",
                         tool_call_id: tool_call.id,
+                        tool_name: function_name,
                         content: JSON.stringify(function_result)
                     })
 
                     this.saveMemory();
-
-                    console.log(function_result)
 
                     //Костыль для остановки вызова функций. Например если боту надо сначала дойти до цели, то мы останавливаем вызов функций и возвращаем сообщение.
                     if (function_result.stop_calling) {
@@ -94,7 +102,10 @@ export class LLMExtension extends BaseBotExtension {
                 role: "assistant",
                 content: choice.message.content!
             })
+
+            this.tidyMemory();
             this.saveMemory();
+
             //Если нет tool calls, то возвращаем ответ
             return choice.message.content!
         }
