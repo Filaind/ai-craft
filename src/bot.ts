@@ -56,10 +56,11 @@ export class Bot {
 
 
     async onChatMessage(username: string, message: string) {
-        console.log('onChatMessage', username, message);
-
         //Игнорируем сообщения от бота
         if (username === this.mineflayerBot!.username || message.startsWith('%')) return
+
+        console.log('onChatMessage', username, message);
+
 
         const response = await this.llm.getResponse(`User ${username} said: ${message}`)
 

@@ -2,11 +2,12 @@ import type { Bot } from "../../bot";
 import { Movements } from "mineflayer-pathfinder";
 import type { Block } from "prismarine-block";
 import { LLMFunctions } from "../llm-functions";
-import { getNearbyEntities } from "./base-bot-functions";
+//import { getNearbyEntities } from "./base-bot-functions";
 import type { Bot as MineflayerBot } from "mineflayer";
 import 'ses';
+import { Vec3 } from 'vec3';
 
-export function getNearestBlocksWhere(bot: Bot, predicate: (block: Block) => boolean, distance=8, count=10000) {
+export function getNearestBlocksWhere(bot: Bot, predicate: (block: Block) => boolean, distance = 8, count = 10000) {
     const mineflayerBot = bot.mineflayerBot!;
 
     /**
@@ -19,12 +20,12 @@ export function getNearestBlocksWhere(bot: Bot, predicate: (block: Block) => boo
      * @example
      * let waterBlocks = world.getNearestBlocksWhere(bot, block => block.name === 'water', 16, 10);
      **/
-    let positions = mineflayerBot.findBlocks({matching: predicate, maxDistance: distance, count: count});
+    let positions = mineflayerBot.findBlocks({ matching: predicate, maxDistance: distance, count: count });
     let blocks = positions.map(position => mineflayerBot.blockAt(position));
     return blocks;
 }
 
-export async function collectBlock(bot: Bot, blockType: string, num=1, exclude: Position[] | null = null) {
+export async function collectBlock(bot: Bot, blockType: string, num = 1, exclude: Position[] | null = null) {
     const mineflayerBot = bot.mineflayerBot!;
     /**
      * Collect one of the given block type.
@@ -41,9 +42,9 @@ export async function collectBlock(bot: Bot, blockType: string, num=1, exclude: 
     }
     let blocktypes = [blockType];
     if (blockType === 'coal' || blockType === 'diamond' || blockType === 'emerald' || blockType === 'iron' || blockType === 'gold' || blockType === 'lapis_lazuli' || blockType === 'redstone')
-        blocktypes.push(blockType+'_ore');
+        blocktypes.push(blockType + '_ore');
     if (blockType.endsWith('ore'))
-        blocktypes.push('deepslate_'+blockType);
+        blocktypes.push('deepslate_' + blockType);
     if (blockType === 'dirt')
         blocktypes.push('grass_block');
     if (blockType === 'cobblestone')
@@ -59,7 +60,7 @@ export async function collectBlock(bot: Bot, blockType: string, num=1, exclude: 
     // Blocks to ignore safety for, usually next to lava/water
     const unsafeBlocks = ['obsidian'];
 
-    for (let i=0; i<num; i++) {
+    for (let i = 0; i < num; i++) {
         let blocks = getNearestBlocksWhere(bot, block => {
             if (!blocktypes.includes(block.name)) {
                 return false;
@@ -76,7 +77,7 @@ export async function collectBlock(bot: Bot, blockType: string, num=1, exclude: 
                 // collect only source blocks
                 return block.metadata === 0;
             }
-            
+
             //@ts-ignore
             return movements.safeToBreak(block) || unsafeBlocks.includes(block.name);
         }, 64, 1);
@@ -114,21 +115,24 @@ LLMFunctions.register({
     },
     strict: true,
     type: 'function'
-})  
+})
 
 
 export const makeCompartment = (endowments = {}) => {
     return new Compartment({
-      // provide untamed Math, Date, etc
-      Math,
-      Date,
-      // standard endowments
-      ...endowments
+        // provide untamed Math, Date, etc
+        Math,
+        Date,
+        // standard endowments
+        ...endowments
     });
-  }
+}
 
 const exampleCode = `
+const vec3 = require('vec3');
+
 await bot.chat('Hello, world!');
+bot.placeBlock(referenceBlock, faceVector)
 
 /* CODE HERE */
 
@@ -136,26 +140,37 @@ await bot.chat('Hello, world!');
 
 LLMFunctions.register({
     name: "execute_mineflayer_code",
-    description: "Execute mineflayer JS code for complex tasks. USE THIS EXAMPLE CODE AS A GUIDE: " + exampleCode,
+    description: "Execute mineflayer TS code for complex tasks",
     parameters: {
         type: "object",
         properties: {
-            code: { type: "string"}
+            code: {
+                type: "string",
+                description: exampleCode
+            }
         }
     },
     function: async (args: { bot: Bot, code: string }) => {
 
+
         console.log("Executing code: " + args.code);
-        
+
         const mineflayerBot = args.bot.mineflayerBot;
-        const func = makeCompartment().evaluate(`(async (bot) => {
+
+        const func = makeCompartment({
+            require,
+            Math,
+            Date,
+            console,
+            Vec3
+        }).evaluate(`(async (bot) => {
             ${args.code}
         })`);
 
         await func(mineflayerBot!);
 
-        return "Success: Code executed";
+        return 'done'
     },
-    strict: true,
+    strict: false,
     type: 'function'
 })  

@@ -59,7 +59,7 @@ export class LLMExtension extends BaseBotExtension {
             model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
             tool_choice: "auto",
             tools: LLMFunctions.getFunctionList() as any,
-            messages: this.messages
+            messages: this.messages,
         });
 
         const choice = response.choices[0]!
@@ -79,7 +79,7 @@ export class LLMExtension extends BaseBotExtension {
  //                   this.bot.mineflayerBot!.chat("Calling function: " + function_name + " with arguments: " + tool_call.function.arguments)
 
                     const function_result = await LLMFunctions.invokeFunction(function_name, function_arguments)
-
+                    
                     this.messages.push({
                         role: "tool",
                         tool_call_id: tool_call.id,
