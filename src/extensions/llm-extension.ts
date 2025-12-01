@@ -10,7 +10,7 @@ export class LLMExtension extends BaseBotExtension {
     private messages: ChatCompletionMessageParam[] = [];
 
 
-    public systemMessage: string = "You are a minecraft bot player. Just play the game and help other players.";
+    public systemMessage: string = "You are a minecraft bot player. Just play the game and help other players. Use tools to interact with the game.";
 
     constructor(bot: Bot, client: OpenAI) {
         super(bot);

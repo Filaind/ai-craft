@@ -30,6 +30,8 @@ export class Bot {
         // Log errors and kick reasons:
         this.mineflayerBot.on('kicked', console.log)
         this.mineflayerBot.on('error', console.log)
+
+        this.mineflayerBot.on('goal_reached', this.onGoalReached.bind(this))
     }
 
     getBotDataPath() {
@@ -47,15 +49,16 @@ export class Bot {
     }
 
 
+    async onGoalReached() {
+        await this.llm.getResponse("Goal reached!")
+    }
+
     async onChatMessage(username: string, message: string) {
         console.log('onChatMessage', username, message);
 
         //Игнорируем сообщения от бота
         if (username === this.mineflayerBot!.username) return
 
-        const response = await this.llm.getResponse(message)
-
-        this.mineflayerBot!.chat(response)
-
+        await this.llm.getResponse(message)
     }
 }
