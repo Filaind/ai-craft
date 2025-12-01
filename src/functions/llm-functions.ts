@@ -36,15 +36,19 @@ export class LLMFunctions {
 
     private static registered: boolean = false
 
-    public static async registerAllFunctions() {
+    /**
+     * Register all TS functions from the given path.
+     * @param path - The path to the functions.
+     */
+    public static async registerFunctions(path: string) {
         if (this.registered) return
 
-        const files = fs.readdirSync('./src/functions/examples');
+        const files = fs.readdirSync(path);
 
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
             if (file && file.endsWith('.ts')) {
-                await import(`./examples/${file}`)
+                await import(`${path}/${file}`)
             }
         }
 

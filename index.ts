@@ -7,7 +7,7 @@ const client = new OpenAI({
     baseURL: "http://192.168.1.204:1234/v1",
 });
 
-await LLMFunctions.registerAllFunctions();
+await LLMFunctions.registerFunctions('./src/functions/examples');
 
 
 const bot = new Bot({
