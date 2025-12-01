@@ -44,7 +44,7 @@ export async function giveToPlayer(bot: Bot, itemType: string, entity: Entity, n
 }
 
 LLMFunctions.register({
-    name: "show inventory",
+    name: "show_inventory",
     parameters: {
         type: "object",
         properties: {}
@@ -63,7 +63,7 @@ LLMFunctions.register({
 })
 
 LLMFunctions.register({
-    name: "give item to entity",
+    name: "give_item_to_entity",
     description: "Before calling this function show your inventory using the function 'show inventory'",
     parameters: {
         type: "object",

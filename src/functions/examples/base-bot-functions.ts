@@ -19,7 +19,7 @@ export function getNearbyEntities(bot: Bot, maxDistance = 16) {
 }
 
 LLMFunctions.register({
-    name: "Walk to position",
+    name: "walk_to_position",
     description: "Before calling this function, you must call the function 'get nearby entities' to get the position of the entity you want to walk to",
     parameters: {
         type: "object",
@@ -44,7 +44,7 @@ LLMFunctions.register({
 })
 
 LLMFunctions.register({
-    name: "attack entity",
+    name: "attack_entity",
     description: "You can use this function to attack an entity or mobs for farm or other purposes",
     parameters: {
         type: "object",
@@ -69,7 +69,7 @@ LLMFunctions.register({
 })
 
 LLMFunctions.register({
-    name: "get nearby entities",
+    name: "get_nearby_entities",
     description: "Get all entities nearby the bot",
     parameters: {
         type: "object",
