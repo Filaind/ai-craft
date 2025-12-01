@@ -56,7 +56,7 @@ export class LLMExtension extends BaseBotExtension {
 
         //Если есть tool calls, то вызываем функции
         if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
-            choice.message.tool_calls?.forEach((tool_call) => {
+            for (const tool_call of choice.message.tool_calls) {
                 if (tool_call.type == "function") {
 
                     console.log(tool_call)
@@ -76,8 +76,16 @@ export class LLMExtension extends BaseBotExtension {
                     })
 
                     this.saveMemory();
+
+                    console.log(function_result)
+
+                    //Костыль для остановки вызова функций. Например если боту надо сначала дойти до цели, то мы останавливаем вызов функций и возвращаем сообщение.
+                    if (function_result.stop_calling) {
+                        console.log("Stop calling functions")
+                        return function_result.message
+                    }
                 }
-            })
+            }
             //Рекурсивно вызываем дальше для получения следующего ответа
             return this.getResponse()
         }

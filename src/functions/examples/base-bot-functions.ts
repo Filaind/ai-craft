@@ -34,7 +34,10 @@ LLMFunctions.register({
         args.bot.mineflayerBot!.pathfinder.setMovements(defaultMove)
         args.bot.mineflayerBot!.pathfinder.setGoal(new goals.GoalNear(args.x, args.y, args.z, 1))
 
-        return "Walking to position. STOP CALLING THIS FUNCTION UNTIL YOU REACH THE POSITION"
+        return {
+            message: "Walking to position",
+            stop_calling: true
+        }
     },
     strict: true,
     type: 'function'
