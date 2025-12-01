@@ -1,19 +1,38 @@
 import OpenAI from "openai";
 import { LLMFunctions } from "../functions/llm-functions";
 import type { ChatCompletionMessageParam } from "openai/resources";
-import { BaseBotExtension } from "../bot";
-import { Bot } from "../bot";
+import { BaseBotExtension } from "./base-bot-extension";
+import type { Bot } from "../bot";
+import fs from 'fs';
 
 export class LLMExtension extends BaseBotExtension {
     private client: OpenAI;
     private messages: ChatCompletionMessageParam[] = [];
+    
+
+    public systemMessage: string = "You are a helpful assistant that can help with Minecraft tasks.";
 
     constructor(bot: Bot, client: OpenAI) {
         super(bot);
         this.client = client;
+
+
     }
 
-    async getResponse(): Promise<string> {
+    saveMemory() {
+        fs.writeFileSync('memory.json', JSON.stringify(this.messages, null, 2));
+    }
+
+
+    async getResponse(newMessage?: string): Promise<string> {
+        if (newMessage) {
+            this.messages.push({
+                role: "user",
+                content: newMessage
+            })
+        }
+
+        console.log('LLM request');
         const response = await this.client.chat.completions.create({
             model: "qwen/qwen3-coder-30b",
             tool_choice: "auto",

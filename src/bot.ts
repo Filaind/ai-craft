@@ -3,14 +3,6 @@ import { pathfinder } from 'mineflayer-pathfinder';
 import { LLMExtension } from './extensions/llm-extension';
 import OpenAI from 'openai';
 
-export class BaseBotExtension {
-    protected bot: Bot;
-
-    constructor(bot: Bot) {
-        this.bot = bot;
-    }
-}
-
 export class Bot {
     private mineflayerBot?: mineflayer.Bot;
     private llm: LLMExtension;
@@ -25,13 +17,10 @@ export class Bot {
         this.mineflayerBot = mineflayer.createBot({
             ...options,
         })
-
+        
         this.mineflayerBot.loadPlugin(pathfinder)
 
-        this.mineflayerBot.on('chat', (username: string, message: string) => {
-            if (username === this.mineflayerBot!.username) return
-            this.mineflayerBot!.chat(message)
-        })
+        this.mineflayerBot.on('chat', this.onChatMessage.bind(this))
 
         // Log errors and kick reasons:
         this.mineflayerBot.on('kicked', console.log)
@@ -39,7 +28,15 @@ export class Bot {
     }
 
 
-    async process() {
+    async onChatMessage(username: string, message: string) {
+        console.log('onChatMessage', username, message);
+
+        //Игнорируем сообщения от бота
+        if (username === this.mineflayerBot!.username) return
+
+        const response = await this.llm.getResponse(message)
+
+        this.mineflayerBot!.chat(response)
 
     }
 }

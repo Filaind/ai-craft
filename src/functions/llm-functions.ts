@@ -48,7 +48,7 @@ export class LLMFunctions {
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
             if (file && file.endsWith('.ts')) {
-                await import(`${path}/${file}`)
+                await import(`./examples/${file}`)
             }
         }
 
