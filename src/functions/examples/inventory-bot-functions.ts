@@ -64,7 +64,7 @@ LLMFunctions.register({
 
 LLMFunctions.register({
     name: "give_item_to_entity",
-    description: "Before calling this function show your inventory using the function 'show inventory'",
+    description: "",
     parameters: {
         type: "object",
         properties: {

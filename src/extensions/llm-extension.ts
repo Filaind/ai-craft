@@ -14,7 +14,7 @@ export class LLMExtension extends BaseBotExtension {
     private messages: ChatMessage[] = [];
 
 
-    public systemMessage: string = "You are a minecraft bot player. Just play the game and help other players. Use tools to interact with the game.";
+    public systemMessage: string = "You are a minecraft player. Just play the game and help other players. Use tools to interact with the game.";
 
     constructor(bot: Bot, client: OpenAI) {
         super(bot);
@@ -76,7 +76,7 @@ export class LLMExtension extends BaseBotExtension {
                     let function_arguments = JSON.parse(tool_call.function.arguments)
                     //Добавляем класс бота в аргументы функции
                     function_arguments.bot = this.bot;
-                    this.bot.mineflayerBot!.chat("Calling function: " + function_name + " with arguments: " + tool_call.function.arguments)
+ //                   this.bot.mineflayerBot!.chat("Calling function: " + function_name + " with arguments: " + tool_call.function.arguments)
 
                     const function_result = await LLMFunctions.invokeFunction(function_name, function_arguments)
 

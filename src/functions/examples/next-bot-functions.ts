@@ -1,0 +1,115 @@
+import type { Bot } from "../../bot";
+import { Movements } from "mineflayer-pathfinder";
+import type { Block } from "prismarine-block";
+import { LLMFunctions } from "../llm-functions";
+import { getNearbyEntities } from "./base-bot-functions";
+
+export function getNearestBlocksWhere(bot: Bot, predicate: (block: Block) => boolean, distance=8, count=10000) {
+    const mineflayerBot = bot.mineflayerBot!;
+
+    /**
+     * Get a list of the nearest blocks that satisfy the given predicate.
+     * @param {Bot} bot - The bot to get the nearest blocks for.
+     * @param {function} predicate - The predicate to filter the blocks.
+     * @param {number} distance - The maximum distance to search, default 16.
+     * @param {number} count - The maximum number of blocks to find, default 10000.
+     * @returns {Block[]} - The nearest blocks that satisfy the given predicate.
+     * @example
+     * let waterBlocks = world.getNearestBlocksWhere(bot, block => block.name === 'water', 16, 10);
+     **/
+    let positions = mineflayerBot.findBlocks({matching: predicate, maxDistance: distance, count: count});
+    let blocks = positions.map(position => mineflayerBot.blockAt(position));
+    return blocks;
+}
+
+export async function collectBlock(bot: Bot, blockType: string, num=1, exclude: Position[] | null = null) {
+    const mineflayerBot = bot.mineflayerBot!;
+    /**
+     * Collect one of the given block type.
+     * @param {MinecraftBot} bot, reference to the minecraft bot.
+     * @param {string} blockType, the type of block to collect.
+     * @param {number} num, the number of blocks to collect. Defaults to 1.
+     * @param {list} exclude, a list of positions to exclude from the search. Defaults to null.
+     * @returns {Promise<boolean>} true if the block was collected, false if the block type was not found.
+     * @example
+     * await skills.collectBlock(bot, "oak_log");
+     **/
+    if (num < 1) {
+        return `Invalid number of blocks to collect: ${num}.`;
+    }
+    let blocktypes = [blockType];
+    if (blockType === 'coal' || blockType === 'diamond' || blockType === 'emerald' || blockType === 'iron' || blockType === 'gold' || blockType === 'lapis_lazuli' || blockType === 'redstone')
+        blocktypes.push(blockType+'_ore');
+    if (blockType.endsWith('ore'))
+        blocktypes.push('deepslate_'+blockType);
+    if (blockType === 'dirt')
+        blocktypes.push('grass_block');
+    if (blockType === 'cobblestone')
+        blocktypes.push('stone');
+    const isLiquid = blockType === 'lava' || blockType === 'water';
+
+    let collected = 0;
+
+    const movements = new Movements(bot.mineflayerBot!);
+    movements.dontMineUnderFallingBlock = false;
+    movements.dontCreateFlow = true;
+
+    // Blocks to ignore safety for, usually next to lava/water
+    const unsafeBlocks = ['obsidian'];
+
+    for (let i=0; i<num; i++) {
+        let blocks = getNearestBlocksWhere(bot, block => {
+            if (!blocktypes.includes(block.name)) {
+                return false;
+            }
+            if (exclude) {
+                for (let position of exclude) {
+                    //@ts-ignore
+                    if (block.position.x === position.x && block.position.y === position.y && block.position.z === position.z) {
+                        return false;
+                    }
+                }
+            }
+            if (isLiquid) {
+                // collect only source blocks
+                return block.metadata === 0;
+            }
+            
+            //@ts-ignore
+            return movements.safeToBreak(block) || unsafeBlocks.includes(block.name);
+        }, 64, 1);
+
+        if (blocks.length === 0) {
+            break;
+        }
+        const block = blocks[0];
+        const itemId = mineflayerBot.heldItem ? mineflayerBot.heldItem.type : null
+        if (!block?.canHarvest(itemId)) {
+            return false;
+        }
+        try {
+            await mineflayerBot.collectBlock.collect(block!);
+        }
+        catch (err) {
+        }
+    }
+    return collected > 0;
+}
+
+LLMFunctions.register({
+    name: "collect_block",
+    description: "Collect a block of the given type",
+    parameters: {
+        type: "object",
+        properties: {
+            block_type: { type: "string", description: "The type of the block to collect" },
+            num: { type: "number", description: "The number of blocks to collect" }
+        }
+    },
+    function: async (args: { bot: Bot, block_type: string, num: number }) => {
+        const res = await collectBlock(args.bot, args.block_type, args.num);
+        return "Collected " + args.block_type + " blocks";
+    },
+    strict: true,
+    type: 'function'
+})  
