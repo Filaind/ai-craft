@@ -75,7 +75,7 @@ LLMFunctions.register({
         type: "object",
         properties: {
             //type: { type: "string", enum: ["player", "mob"] },
-            maxDistance: { type: "number", description: "Max allowed distance 1000" }
+            maxDistance: { type: "number", description: "Max allowed distance 1000"}
         }
     },
     function: (args: { bot: Bot,  maxDistance: number }) => {
