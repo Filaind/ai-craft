@@ -1,9 +1,9 @@
 import mineflayer, { type BotOptions } from 'mineflayer'
 import { pathfinder } from 'mineflayer-pathfinder';
-import { LLM } from './llm';
+import { LLMExtension } from './extensions/llm-extension';
 import OpenAI from 'openai';
 
-export class BotExtension {
+export class BaseBotExtension {
     protected bot: Bot;
 
     constructor(bot: Bot) {
@@ -11,13 +11,12 @@ export class BotExtension {
     }
 }
 
-
 export class Bot {
     private mineflayerBot?: mineflayer.Bot;
-    private llm: LLM;
+    private llm: LLMExtension;
 
     constructor(options: BotOptions, llmClient: OpenAI) {
-        this.llm = new LLM(this, llmClient);
+        this.llm = new LLMExtension(this, llmClient);
         this.start(options)
     }
 

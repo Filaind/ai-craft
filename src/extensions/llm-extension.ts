@@ -1,10 +1,10 @@
 import OpenAI from "openai";
-import { LLMFunctions } from "./functions/llm-functions";
+import { LLMFunctions } from "../functions/llm-functions";
 import type { ChatCompletionMessageParam } from "openai/resources";
-import { BotExtension } from "./bot";
-import { Bot } from "./bot";
+import { BaseBotExtension } from "../bot";
+import { Bot } from "../bot";
 
-export class LLM extends BotExtension {
+export class LLMExtension extends BaseBotExtension {
     private client: OpenAI;
     private messages: ChatCompletionMessageParam[] = [];
 
