@@ -102,7 +102,7 @@ LLMFunctions.register({
     parameters: {
         type: "object",
         properties: {
-            block_type: { type: "string", description: "The type of the block to collect" },
+            block_type: { type: "string", description: "The type of the block to collect, for example 'oak_log', 'coal_ore', 'diamond_ore', 'emerald_ore', 'iron_ore', 'gold_ore', 'lapis_lazuli_ore', 'redstone_ore', 'dirt', 'cobblestone', 'stone', 'grass_block', 'water', 'lava', 'obsidian' etc." },
             num: { type: "number", description: "The number of blocks to collect" }
         }
     },
