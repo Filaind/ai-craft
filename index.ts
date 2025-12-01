@@ -1,21 +1,8 @@
-import mineflayer from 'mineflayer'
-import { pathfinder, Movements, goals } from 'mineflayer-pathfinder'
+import { Bot } from './src/bot'
 
-
-const bot = mineflayer.createBot({
+const bot = new Bot({
     host: 'localhost',
     username: 'Bot',
     auth: 'offline',
     port: 25565,
 })
-
-bot.loadPlugin(pathfinder)
-
-bot.on('chat', (username: string, message: string) => {
-    if (username === bot.username) return
-    bot.chat(message)
-})
-
-// Log errors and kick reasons:
-bot.on('kicked', console.log)
-bot.on('error', console.log)

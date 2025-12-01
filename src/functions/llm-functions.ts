@@ -64,7 +64,7 @@ export class LLMFunctions {
         this.llmFunctions.push(func)
     }
 
-    //depreciated
+    //deprecated
     //     public static prompt() {
     //         return `AS AI YOU can use the functions
     // Don't say you don't know or can't do something. Try to find out or do it through the functions.

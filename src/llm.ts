@@ -9,44 +9,54 @@ const client = new OpenAI({
 
 await LLMFunctions.registerAllFunctions();
 
-let chat: Array<ChatCompletionMessageParam> = [];
-chat.push({
-    role: "user",
-    content: "Get current time and weather"
-})
 
-async function getResponse() {
-    const response = await client.chat.completions.create({
-        model: "qwen/qwen3-coder-30b",
-        tool_choice: "auto",
-        tools: LLMFunctions.getFunctionList() as any,
-        messages: chat
-    });
+class LLM {
+    private client: OpenAI;
+    private messages: ChatCompletionMessageParam[] = [];
 
-    const choice = response.choices[0]!
-    if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
-        console.log("Tool calls", choice.message.tool_calls.length)
-        choice.message.tool_calls?.forEach((tool_call) => {
-            if (tool_call.type == "function") {
-                console.log(tool_call)
-                const function_name = tool_call.function.name
-                const function_arguments = JSON.parse(tool_call.function.arguments)
-                const function_result = LLMFunctions.invokeFunction(function_name, function_arguments)
-                console.log(function_result)
-                chat.push({
-                    role: "tool",
-                    tool_call_id: tool_call.id,
-                    content: JSON.stringify(function_result)
-                })
-            }
-        })
-        return getResponse()
-    }
-    else{
-        console.log(choice.message.content)
-        return choice.message.content
+    constructor(client: OpenAI) {
+        this.client = client;
     }
 
+    async getResponse(): Promise<string> {
+        const response = await client.chat.completions.create({
+            model: "qwen/qwen3-coder-30b",
+            tool_choice: "auto",
+            tools: LLMFunctions.getFunctionList() as any,
+            messages: this.messages
+        });
+
+        const choice = response.choices[0]!
+
+        //Если есть tool calls, то вызываем функции
+        if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
+            choice.message.tool_calls?.forEach((tool_call) => {
+                if (tool_call.type == "function") {
+
+                    console.log(tool_call)
+
+                    const function_name = tool_call.function.name
+                    const function_arguments = JSON.parse(tool_call.function.arguments)
+                    const function_result = LLMFunctions.invokeFunction(function_name, function_arguments)
+                    
+                    this.messages.push({
+                        role: "tool",
+                        tool_call_id: tool_call.id,
+                        content: JSON.stringify(function_result)
+                    })
+                }
+            })
+            //Рекурсивно вызываем дальше для получения следующего ответа
+            return this.getResponse()
+        }
+        else {
+            this.messages.push({
+                role: "assistant",
+                content: choice.message.content!
+            })
+            //Если нет tool calls, то возвращаем ответ
+            return choice.message.content!
+        }
+
+    }
 }
-
-getResponse()
