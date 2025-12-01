@@ -49,15 +49,15 @@ LLMFunctions.register({
     parameters: {
         type: "object",
         properties: {
-            type: { type: "string", enum: ["player", "mob"] },
-            maxDistance: { type: "number"}
+            //type: { type: "string", enum: ["player", "mob"] },
+            maxDistance: { type: "number", description: "Max allowed distance 1000" }
         }
     },
-    function: (args: { bot: Bot, type: "player" | "mob", maxDistance: number }) => {
+    function: (args: { bot: Bot,  maxDistance: number }) => {
         let entities = getNearbyEntities(args.bot, args.maxDistance)
-        if(args.type) {
-            entities = entities.filter((entity) => entity!.type === args.type)
-        }
+        // if(args.type) {
+        //     entities = entities.filter((entity) => entity!.type === args.type)
+        // }
         if(entities.length === 0) {
             return "No entities found. Increase the max distance."
         }
