@@ -47,7 +47,7 @@ export class Bot {
     }
 
     sendChatMessage(message: string) {
-        const sanitized = message.replace(/[^a-zA-Zа-яА-Я0-9]/g, '').trim();
+        const sanitized = message.replace(/[^a-zA-Zа-яА-Я0-9 .,!?-_:;'"()]/g, '').trim();
         this.mineflayerBot!.chat("%" + sanitized);
     }
 
