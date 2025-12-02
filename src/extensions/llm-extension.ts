@@ -6,6 +6,7 @@ import type { Bot } from "../bot";
 import type { GameMode } from "mineflayer"
 import fs from 'fs';
 
+
 type ChatMessage = ChatCompletionMessageParam & {
     tool_name?: string;
 }
@@ -38,6 +39,9 @@ export class LLMExtension extends BaseBotExtension {
         GAMEMODES.forEach((v) => groups.delete(v));
         groups.add(gameMode);
         this.toolsCache.groups = groups;
+
+        console.log(`Gamemode changed to ${gameMode}. Tools:`);
+        console.log(JSON.stringify(this.toolsCache.tools))
     }
 
     loadMemory() {

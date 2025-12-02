@@ -82,7 +82,7 @@ export class LLMFunctions {
             function: {
                 name,
                 description,
-                parameters: z.toJSONSchema(schema)
+                parameters: z.toJSONSchema(schema, { target: "openapi-3.0" })
             }
         }));
     }

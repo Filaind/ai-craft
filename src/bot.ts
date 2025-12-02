@@ -40,7 +40,7 @@ export class Bot {
 
         this.mineflayerBot.on('game', this.onGameStateChanged.bind(this))
         
-        //@ts-ignore
+        // @ts-ignore
         this.mineflayerBot.on('stoppedAttacking', this.onStoppedAttacking.bind(this))
     }
 
@@ -53,7 +53,6 @@ export class Bot {
         if (gameMode != this.lastGameMode) {
             this.lastGameMode = gameMode;
             this.llm.setGamemode(this.lastGameMode);
-            console.log('Gamemode changed to', this.mineflayerBot!.game.gameMode);
         }
     }
 

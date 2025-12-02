@@ -5,14 +5,15 @@ import { Movements, goals } from "mineflayer-pathfinder";
 import { z } from "zod";
 
 export function getNearbyEntities(bot: Bot, maxDistance = 16) {
-    let entities: { entity: Entity, distance: number }[] = [];
-    for (const entity of Object.values(bot.mineflayerBot!.entities)) {
+    let entity_distances: { entity: Entity, distance: number }[] = [];
+    let entities = Object.values(bot.mineflayerBot!.entities).filter((v) => v.username != bot.mineflayerBot!.username)
+    for (const entity of entities) {
         const distance = entity.position.distanceTo(bot.mineflayerBot!.entity.position);
         if (distance > maxDistance) continue;
-        entities.push({ entity: entity, distance: distance });
+        entity_distances.push({ entity: entity, distance: distance });
     }
-    entities.sort((a, b) => a.distance - b.distance);
-    return entities;
+    entity_distances.sort((a, b) => a.distance - b.distance);
+    return entity_distances;
 }
 
 LLMFunctions.register({
