@@ -109,7 +109,7 @@ LLMFunctions.register({
             num: { type: "number", description: "The number of blocks to collect" }
         }
     },
-    function: async (args: { bot: Bot, block_type: string, num: number }) => {
+    handler: async (args: { bot: Bot, block_type: string, num: number }) => {
         const res = await collectBlock(args.bot, args.block_type, args.num);
         return "Collected " + args.block_type + " blocks";
     },
@@ -150,7 +150,7 @@ LLMFunctions.register({
             }
         }
     },
-    function: async (args: { bot: Bot, code: string }) => {
+    handler: async (args: { bot: Bot, code: string }) => {
 
 
         console.log("Executing code: " + args.code);

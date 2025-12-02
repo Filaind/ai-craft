@@ -2,6 +2,7 @@ import type { Bot } from "../../bot"
 import type { Entity } from "prismarine-entity"
 import { LLMFunctions } from "../llm-functions"
 import { Movements, goals } from "mineflayer-pathfinder";
+import { z } from "zod";
 
 export function getNearbyEntities(bot: Bot, maxDistance = 16) {
     let entities: { entity: Entity, distance: number }[] = [];
@@ -81,32 +82,33 @@ LLMFunctions.register({
 
 LLMFunctions.register({
     name: "get_nearby_entities",
-    description: "Get all entities nearby the bot",
-    parameters: {
-        type: "object",
-        properties: {
-            //type: { type: "string", enum: ["player", "mob"] },
-            maxDistance: { type: "number", description: "Max allowed distance 1000" }
-        }
-    },
-    function: (args: { bot: Bot, maxDistance: number }) => {
-        let entities = getNearbyEntities(args.bot, args.maxDistance)
-        // if(args.type) {
-        //     entities = entities.filter((entity) => entity!.type === args.type)
-        // }
-        if (entities.length === 0) {
-            return "No entities found. Increase the max distance."
-        }
-        return entities.map((entity) => {
-            return {
-                id: entity!.id,
-                name: entity!.name,
-                type: entity!.type,
-                username: entity!.username,
-                position: entity!.position
-            }
-        })
-    },
-    strict: true,
-    type: 'function'
+    description: "Get the nearby entities",
+    schema: z.object({
+        maxDistance: z.number().describe("The maximum distance to search for entities")
+    }),
+    handler: (args) => {
+        return getNearbyEntities(args.bot, args.maxDistance)
+    }
 })
+
+// Хелпер для создания типизированной функции с Zod
+function createTypedFunction<T extends z.ZodObject<any>>(
+    config: {
+        name: string;
+        description: string;
+        schema: T;
+        strict?: boolean;
+    },
+    handler: (args: { bot: Bot } & z.infer<T>) => any
+) {
+    const jsonSchema = zodToJsonSchema(config.schema as any, { target: "openAi" });
+
+    LLMFunctions.register({
+        name: config.name,
+        description: config.description,
+        parameters: jsonSchema,
+        handler: handler,
+        strict: config.strict ?? true,
+        type: 'function'
+    });
+}

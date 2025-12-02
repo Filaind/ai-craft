@@ -9,7 +9,7 @@ LLMFunctions.register({
             city: { type: "string", description: "The city to get the weather for" }
         }
     },
-    function: (args: { format: string }) => {
+    handler: (args: { format: string }) => {
         return {
             temperature: 20,
             humidity: 50,

@@ -19,7 +19,7 @@ LLMFunctions.register({
             amount: { type: "number", description: "Amount of items to take. Minimum is 1, maximum is 64." }
         }
     },
-    function: async (args: { bot: Bot, item_id: string, amount: number }) => {
+    handler: async (args: { bot: Bot, item_id: string, amount: number }) => {
         const item = Data.itemsByName[args.item_id];
         if (!item) {
             return `Item ID ${args.item_id} is invalid!`;

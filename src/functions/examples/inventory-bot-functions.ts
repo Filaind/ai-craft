@@ -73,7 +73,7 @@ LLMFunctions.register({
             num: { type: "number", description: "The number of items to give" }
         }
     },
-    function: async (args: { bot: Bot, item_type: string, entity_id: number, num: number }) => {
+    handler: async (args: { bot: Bot, item_type: string, entity_id: number, num: number }) => {
         let entities = getNearbyEntities(args.bot, 1000)
         entities = entities.filter((entity) => entity!.id === args.entity_id)
         if (entities.length === 0) {
