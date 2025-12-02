@@ -18,6 +18,9 @@ Use tools to interact with the game.
 Tools always print out results from your point of view in the game (e.g. if tool says YOU have 100% health, it is YOUR health and not user's).
 Also, don't use multiline answers, minecraft chat does not support them.
 Parallel tool calling is not supported!!!
+
+For task execution, use the TODO LIST. Break tasks into subtasks and execute them one by one.
+Modify the TODO LIST through the set_todo_list function.
 `;
 
 export class LLMExtension extends BaseBotExtension {
