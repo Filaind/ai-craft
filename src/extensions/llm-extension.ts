@@ -101,7 +101,10 @@ export class LLMExtension extends BaseBotExtension {
                 messages: [
                     {
                         role: "user",
-                        content: "Your inventory: " + JSON.stringify(inventory)
+                        content: `Your inventory: ${JSON.stringify(inventory)}
+                        Your position: ${this.bot.mineflayerBot!.entity.position}
+                        Your todo list: ${this.bot.todoList}
+                        `
                     },
                     ...this.messages
                 ],
