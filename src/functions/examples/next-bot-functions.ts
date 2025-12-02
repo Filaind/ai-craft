@@ -131,7 +131,7 @@ LLMFunctions.register({
     handler: async (bot: Bot, args) => {
         for (const [x, y, z, block_type] of args.blocks) {
             const setblockCommand = `/setblock ${x} ${y} ${z} ${block_type}`;
-            bot.sendChatMessage(setblockCommand);
+            bot.mineflayerBot!.chat(setblockCommand);
         }
 
         return "Blocks placed";
