@@ -66,87 +66,101 @@ export class LLMExtension extends BaseBotExtension {
         })
 
         console.log('LLM request');
-        const response = await this.client.chat.completions.create({
-            model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
-            tool_choice: "auto",
-            tools: LLMFunctions.getFunctionList() as any,
-            messages: [
-                {
-                    role: "user",
-                    content: "Your inventory: " + JSON.stringify(inventory)
-                },
-                ...this.messages
-            ],
-        });
+        try {
+            const response = await this.client.chat.completions.create({
+                model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
+                tool_choice: "auto",
+                tools: LLMFunctions.getFunctionList() as any,
+                messages: [
+                    {
+                        role: "user",
+                        content: "Your inventory: " + JSON.stringify(inventory)
+                    },
+                    ...this.messages
+                ],
+            });
+            const choice = response.choices[0]!
 
-        const choice = response.choices[0]!
+            //Если есть tool calls, то вызываем функции
+            if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
+                
+                //Добавляем сообщение ассистента с tool_calls в историю
+                this.messages.push({
+                    role: "assistant",
+                    content: choice.message.content || "",
+                    tool_calls: choice.message.tool_calls
+                })
 
-        //Если есть tool calls, то вызываем функции
-        if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
-            for (const tool_call of choice.message.tool_calls) {
-                if (tool_call.type == "function") {
+                for (const tool_call of choice.message.tool_calls) {
+                    if (tool_call.type == "function") {
 
-                    console.log(tool_call)
+                        console.log(tool_call)
 
-                    const function_name = tool_call.function.name
+                        const function_name = tool_call.function.name
 
-                    //Проверка на 3 подряд вызова одной функции
-                    if (this.functionCallHistory.length >= 2 &&
-                        this.functionCallHistory[this.functionCallHistory.length - 1] === function_name &&
-                        this.functionCallHistory[this.functionCallHistory.length - 2] === function_name) {
-                        console.log(`Penalty: Function ${function_name} called 3 times in a row, skipping`)
+                        //Проверка на 3 подряд вызова одной функции
+                        if (this.functionCallHistory.length >= 2 &&
+                            this.functionCallHistory[this.functionCallHistory.length - 1] === function_name &&
+                            this.functionCallHistory[this.functionCallHistory.length - 2] === function_name) {
+                            console.log(`Penalty: Function ${function_name} called 3 times in a row, skipping`)
+                            this.messages.push({
+                                role: "assistant",
+                                content: `I can't call ${function_name} again, it's been called 3 times in a row`
+                            })
+                            continue
+                        }
+
+                        let function_arguments = JSON.parse(tool_call.function.arguments)
+                        //Добавляем класс бота в аргументы функции
+                        function_arguments.bot = this.bot;
+                        //                   this.bot.mineflayerBot!.chat("Calling function: " + function_name + " with arguments: " + tool_call.function.arguments)
+
+                        const function_result = await LLMFunctions.invokeFunction(function_name, function_arguments)
+
                         this.messages.push({
-                            role: "assistant",
-                            content: `I can't call ${function_name} again, it's been called 3 times in a row`
+                            role: "tool",
+                            tool_call_id: tool_call.id,
+                            tool_name: function_name,
+                            content: JSON.stringify(function_result)
                         })
-                        continue
-                    }
 
-                    let function_arguments = JSON.parse(tool_call.function.arguments)
-                    //Добавляем класс бота в аргументы функции
-                    function_arguments.bot = this.bot;
-                    //                   this.bot.mineflayerBot!.chat("Calling function: " + function_name + " with arguments: " + tool_call.function.arguments)
+                        //Добавляем функцию в историю вызовов
+                        this.functionCallHistory.push(function_name)
+                        //Ограничиваем историю последними 3 вызовами
+                        if (this.functionCallHistory.length > 3) {
+                            this.functionCallHistory.shift()
+                        }
 
-                    const function_result = await LLMFunctions.invokeFunction(function_name, function_arguments)
+                        this.saveMemory();
 
-                    this.messages.push({
-                        role: "tool",
-                        tool_call_id: tool_call.id,
-                        tool_name: function_name,
-                        content: JSON.stringify(function_result)
-                    })
-
-                    //Добавляем функцию в историю вызовов
-                    this.functionCallHistory.push(function_name)
-                    //Ограничиваем историю последними 3 вызовами
-                    if (this.functionCallHistory.length > 3) {
-                        this.functionCallHistory.shift()
-                    }
-
-                    this.saveMemory();
-
-                    //Костыль для остановки вызова функций. Например если боту надо сначала дойти до цели, то мы останавливаем вызов функций и возвращаем сообщение.
-                    if (function_result.stop_calling) {
-                        console.log("Stop calling functions")
-                        return function_result.message
+                        //Костыль для остановки вызова функций. Например если боту надо сначала дойти до цели, то мы останавливаем вызов функций и возвращаем сообщение.
+                        if (function_result.stop_calling) {
+                            console.log("Stop calling functions")
+                            return function_result.message
+                        }
                     }
                 }
+                //Рекурсивно вызываем дальше для получения следующего ответа
+                return this.getResponse()
             }
-            //Рекурсивно вызываем дальше для получения следующего ответа
-            return this.getResponse()
-        }
-        else {
-            this.messages.push({
-                role: "assistant",
-                content: choice.message.content!
-            })
+            else {
+                this.messages.push({
+                    role: "assistant",
+                    content: choice.message.content!
+                })
 
-            this.tidyMemory();
-            this.saveMemory();
+                this.tidyMemory();
+                this.saveMemory();
 
-            //Если нет tool calls, то возвращаем ответ
-            return choice.message.content!
+                //Если нет tool calls, то возвращаем ответ
+                return choice.message.content!
+            }
+
+        } catch (error) {
+            console.error('Error in LLM request', JSON.stringify(error, null, 2))
+            return 'Error in LLM request'
         }
+
 
     }
 }
