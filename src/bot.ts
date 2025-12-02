@@ -46,6 +46,11 @@ export class Bot {
         this.mineflayerBot.on('stoppedAttacking', this.onStoppedAttacking.bind(this))
     }
 
+    sendChatMessage(message: string) {
+        const sanitized = message.replace(/[^a-zA-Zа-яА-Я0-9]/g, '').trim();
+        this.mineflayerBot!.chat("%" + sanitized);
+    }
+
     getBotDataPath() {
         return `${Bot.BOT_DATA_PATH}/${this.mineflayerBot!.username}`;
     }
@@ -82,13 +87,13 @@ export class Bot {
 
         const response = await this.llm.getResponse(`User ${username} said: ${message}`)
 
-        this.mineflayerBot!.chat("%" + response)
+        this.sendChatMessage(response)
 
     }
 
 
     async onStoppedAttacking(entity: any) {
         const response = await this.llm.getResponse("Done attacking")
-        this.mineflayerBot!.chat("%" + response)
+        this.sendChatMessage(response)
     }
 }

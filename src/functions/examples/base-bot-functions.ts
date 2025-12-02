@@ -93,7 +93,6 @@ LLMFunctions.register({
     handler: async (bot: Bot, args) => {
         bot.todoList = args.todo_list
 
-        //bot.mineflayerBot!.chat("%" + "TODO LIST: " + args.todo_list)
         return {
             message: "Todo list set"
         }
