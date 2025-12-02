@@ -40,7 +40,7 @@ export class Bot {
 
         this.mineflayerBot.on('game', this.onGameStateChanged.bind(this))
         
-        // @ts-ignore
+        //@ts-ignore
         this.mineflayerBot.on('stoppedAttacking', this.onStoppedAttacking.bind(this))
     }
 

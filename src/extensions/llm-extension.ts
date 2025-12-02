@@ -39,9 +39,9 @@ export class LLMExtension extends BaseBotExtension {
         GAMEMODES.forEach((v) => groups.delete(v));
         groups.add(gameMode);
         this.toolsCache.groups = groups;
+        this.saveTools();
 
-        console.log(`Gamemode changed to ${gameMode}. Tools:`);
-        console.log(JSON.stringify(this.toolsCache.tools))
+        console.log(`Gamemode changed to ${gameMode}`);
     }
 
     loadMemory() {
@@ -52,6 +52,10 @@ export class LLMExtension extends BaseBotExtension {
 
     saveMemory() {
         fs.writeFileSync(`${this.bot.getBotDataPath()}/memory.json`, JSON.stringify(this.messages, null, 2));
+    }
+
+    saveTools() {
+        fs.writeFileSync(`${this.bot.getBotDataPath()}/tools.json`, JSON.stringify(this.toolsCache.tools, null, 2));
     }
 
     //Удаляем из памяти сообщения о функциях get nearby entities. Иначе он будет старые сообщения о позициях объектов юзать.
