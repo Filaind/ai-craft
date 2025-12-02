@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { LLMFunctions, LLMFunctionsCache } from "../functions/llm-functions";
+import { type LLMFunctionResult, LLMFunctions, LLMFunctionsCache } from "../functions/llm-functions";
 import type { ChatCompletionMessageParam } from "openai/resources";
 import { BaseBotExtension } from "./base-bot-extension";
 import type { Bot } from "../bot";
@@ -112,17 +112,17 @@ export class LLMExtension extends BaseBotExtension {
                         }
 
                         let function_arguments = JSON.parse(tool_call.function.arguments)
-                        //Добавляем класс бота в аргументы функции
-                        function_arguments.bot = this.bot;
-                        //                   this.bot.mineflayerBot!.chat("Calling function: " + function_name + " with arguments: " + tool_call.function.arguments)
 
-                        const function_result = await LLMFunctions.invokeFunction(function_name, this.bot, function_arguments)
+                        // this.bot.mineflayerBot!.chat("Calling function: " + function_name + " with arguments: " + tool_call.function.arguments)
+
+                        const ret = await LLMFunctions.invokeFunction(function_name, this.bot, function_arguments)
+                        const result: LLMFunctionResult = (typeof(ret) == "string") ? { message: ret } : ret;
 
                         this.messages.push({
                             role: "tool",
                             tool_call_id: tool_call.id,
                             tool_name: function_name,
-                            content: JSON.stringify(function_result)
+                            content: JSON.stringify(result.message)
                         })
 
                         //Добавляем функцию в историю вызовов
@@ -135,9 +135,9 @@ export class LLMExtension extends BaseBotExtension {
                         this.saveMemory();
 
                         //Костыль для остановки вызова функций. Например если боту надо сначала дойти до цели, то мы останавливаем вызов функций и возвращаем сообщение.
-                        if (function_result.stop_calling) {
+                        if (result.stop_calling) {
                             console.log("Stop calling functions")
-                            return function_result.message
+                            return result.message
                         }
                     }
                 }

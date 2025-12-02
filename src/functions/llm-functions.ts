@@ -4,21 +4,20 @@ import z from 'zod'
 
 import type { Bot } from "../bot";
 
-
-interface LLMFunctionResult {
-    message: string
-    stop_calling?: boolean
-}
-
 /**
  * LLM Function groups. Used to limit the tools available for LLM to call.
  */
 type LLMFunctionGroup = "mining" | "fighting" | "creative"
 
+export interface LLMFunctionResult {
+    message: string
+    stop_calling?: boolean
+}
+
 /**
  * LLM function. If result is a string, it is treated as 'message' in LLMFunctionResult with 'stop_calling' set to false.
  */
-type LLMFunctionHandler<T extends z.ZodObject> = (bot: Bot, args: z.infer<T>) => any
+type LLMFunctionHandler<T extends z.ZodObject> = (bot: Bot, args: z.infer<T>) => Promise<LLMFunctionResult | string>
 
 interface LLMFunctionInfo<T extends z.ZodObject> {
     /**
