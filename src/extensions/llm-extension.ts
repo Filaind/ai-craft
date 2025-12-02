@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { LLMFunctions } from "../functions/llm-functions";
+import { LLMFunctions, LLMFunctionsCache } from "../functions/llm-functions";
 import type { ChatCompletionMessageParam } from "openai/resources";
 import { BaseBotExtension } from "./base-bot-extension";
 import type { Bot } from "../bot";
@@ -13,6 +13,7 @@ export class LLMExtension extends BaseBotExtension {
     private client: OpenAI;
     private messages: ChatMessage[] = [];
     private functionCallHistory: string[] = [];
+    private toolsCache: LLMFunctionsCache = new LLMFunctionsCache();
 
 
     public systemMessage: string = "You are a minecraft player. Just play the game and help other players. Use tools to interact with the game.";
@@ -70,7 +71,7 @@ export class LLMExtension extends BaseBotExtension {
             const response = await this.client.chat.completions.create({
                 model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
                 tool_choice: "auto",
-                tools: LLMFunctions.getFunctionList() as any,
+                tools: this.toolsCache.tools as any,
                 messages: [
                     {
                         role: "user",
@@ -115,7 +116,7 @@ export class LLMExtension extends BaseBotExtension {
                         function_arguments.bot = this.bot;
                         //                   this.bot.mineflayerBot!.chat("Calling function: " + function_name + " with arguments: " + tool_call.function.arguments)
 
-                        const function_result = await LLMFunctions.invokeFunction(function_name, function_arguments)
+                        const function_result = await LLMFunctions.invokeFunction(function_name, this.bot, function_arguments)
 
                         this.messages.push({
                             role: "tool",

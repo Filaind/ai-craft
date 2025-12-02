@@ -18,11 +18,9 @@ type LLMFunctionGroup = "mining" | "fighting" | "creative"
 /**
  * LLM function. If result is a string, it is treated as 'message' in LLMFunctionResult with 'stop_calling' set to false.
  */
-type LLMFunctionHandler<T extends z.ZodObject<any>> = (args: { bot: Bot } & z.infer<T>) => Promise<LLMFunctionResult | string>
+type LLMFunctionHandler<T extends z.ZodObject> = (bot: Bot, args: z.infer<T>) => any
 
-type LLMFunctionArgs = { [key: string]: any }
-
-interface LLMFunctionInfo<T> {
+interface LLMFunctionInfo<T extends z.ZodObject> {
     /**
      * Group to which this function is assigned to.
      */
@@ -42,17 +40,17 @@ interface LLMFunctionInfo<T> {
     /**
      * A JSON schema object describing the parameters of the function.
      */
-    schema: T
+    schema: T;
 
     /**
      * Function to invoke when tool is called
      */
-    handler: (args: { bot: Bot } & z.infer<T>) => any
+    handler: LLMFunctionHandler<T>;
 
 }
 
 export class LLMFunctions {
-    private static llmFunctions: LLMFunctionInfo<any>[] = []
+    private static llmFunctions: LLMFunctionInfo<z.ZodObject>[] = []
 
     /**
      * Register all TS functions from the given path.
@@ -90,76 +88,36 @@ export class LLMFunctions {
         }));
     }
 
-    private static checkFunction(info: LLMFunctionInfo<any>) {
-        // parse parameters of the function
-        const paramMatch = info.handler.toString().match(/\(([^)]*)\)/);
-        let params = paramMatch && paramMatch[1] ? paramMatch[1].split(',').map((v) => v.trim()) : ["bot"];
-
-        // first parameter is always 'bot'
-        if (params.length < 1) {
-            throw TypeError(`Function must have at least 1 parameter`);
-        }
-        params = params.slice(1);
-
-        const schema = Object.entries(info.properties).map(v => v[0]);
-        if (params.length != schema.length) {
-            throw TypeError(`Function parameter count mismatch: schema - ${schema.length}, actual - ${params.length}`);
-        }
-
-        // Check for missing required parameters (optional parameters are allowed to be missing)
-        const missingParams = params.filter((v) => !schema.includes(v))
-        if (missingParams.length > 0) {
-            throw TypeError(`Missing schema parameters: ${missingParams.join(', ')}`);
-        }
-
-        const extraParams = schema.filter((v) => !params.includes(v))
-        if (extraParams.length > 0) {
-            throw TypeError(`Extra schema parameters: ${extraParams.join(', ')}`);
-        }
-    }
-
-    public static register<T>(config: LLMFunctionInfo<T>) {
+    public static register<T extends z.ZodObject>(config: LLMFunctionInfo<T>) {
         console.log(`Registering function ${config.name}`)
 
         if (this.llmFunctions.filter((v) => v.name == config.name).length > 0) {
             throw Error(`Function already exists!`);
         }
-        this.checkFunction(config);
         this.llmFunctions.push(config)
     }
 
     /**
      * Searches function 'name', checks it's schema against 'args' using zod, and then calls it. 
-     * @param bot llm bot context
      * @param name function name
+     * @param bot llm bot context
      * @param args arguments to pass function
      * @returns error text or function result
      */
-    public static invokeFunction(bot: Bot, name: string, args: LLMFunctionArgs) {
+    public static invokeFunction(name: string, bot: Bot, args: { [key: string]: any }) {
         const info = this.llmFunctions.filter((v) => v.name == name)[0];
         if (info == undefined) {
             return `Function '${name}' not found!`
         }
 
         // Validate arguments against the function's schema
-        const schema = z.object(Object.fromEntries(
-            Object.entries(info.properties).map(([key, prop]) => [
-                key, prop.type
-            ])
-        ));
-
         try {
-            schema.parse(args);
+            info.schema.parse(args);
         } catch (error) {
             return `Invalid arguments: ${error}`;
         }
 
-        // get parameters of function to invoke (except first 'bot')
-        const paramMatch = info.handler.toString().match(/\(([^)]*)\)/);
-        let paramNames = paramMatch && paramMatch[1] ? paramMatch[1].split(',').map((v) => v.trim()).slice(1) : [];
-
-        const values = paramNames.map(name => args[name]);
-        return info.handler(bot, ...values);
+        return info.handler(bot, args);
     }
 }
 
