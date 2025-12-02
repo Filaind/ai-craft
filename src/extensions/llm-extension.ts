@@ -11,14 +11,22 @@ type ChatMessage = ChatCompletionMessageParam & {
     tool_name?: string;
 }
 
+const defaultSystemMessage: string = `
+You are a minecraft player.
+Just play the game and help other players.
+Use tools to interact with the game.
+Tools always print out results from your point of view in the game (e.g. if tool says YOU have 100% health, it is YOUR health and not user's).
+Also, don't use multiline answers, minecraft chat does not support them.
+Parallel tool calling is not supported!!!
+`;
+
 export class LLMExtension extends BaseBotExtension {
     private client: OpenAI;
     private messages: ChatMessage[] = [];
     private functionCallHistory: string[] = [];
     private toolsCache: LLMFunctionsCache = new LLMFunctionsCache();
 
-
-    public systemMessage: string = "You are a minecraft player. Just play the game and help other players. Use tools to interact with the game.";
+    public systemMessage: string = defaultSystemMessage;
 
     constructor(bot: Bot, client: OpenAI) {
         super(bot);
@@ -39,10 +47,10 @@ export class LLMExtension extends BaseBotExtension {
         GAMEMODES.forEach((v) => groups.delete(v));
         groups.add(gameMode);
         this.toolsCache.groups = groups;
+
         this.saveTools();
 
-        console.log(`Gamemode changed to ${gameMode}. Tools:`);
-        console.log(JSON.stringify(this.toolsCache.tools, null, 2))
+        console.log(`Gamemode changed to ${gameMode}`);
     }
 
     loadMemory() {

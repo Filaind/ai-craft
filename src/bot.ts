@@ -52,7 +52,7 @@ export class Bot {
         let gameMode = this.mineflayerBot!.game.gameMode;
         if (gameMode != this.lastGameMode) {
             this.lastGameMode = gameMode;
-            this.llm.setGamemode(this.lastGameMode);
+            this.llm.setGamemode(gameMode);
         }
     }
 

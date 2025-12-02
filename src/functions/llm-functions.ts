@@ -132,12 +132,18 @@ export class LLMFunctionsCache {
         this.cachedTools = LLMFunctions.getTools(groups);
     }
 
+    updateTools() {
+        this.cachedTools = LLMFunctions.getTools(this.activeGroups);
+    }
+
     add(group: LLMFunctionGroup) {
         this.activeGroups.add(group)
+        this.updateTools();
     }
 
     delete(group: LLMFunctionGroup) {
         this.activeGroups.delete(group)
+        this.updateTools();
     }
 
     get groups() {
@@ -146,7 +152,7 @@ export class LLMFunctionsCache {
 
     set groups(new_groups: Set<LLMFunctionGroup>) {
         this.activeGroups = new_groups;
-        this.cachedTools = LLMFunctions.getTools(this.activeGroups);
+        this.updateTools();
     }
 
     get tools() {

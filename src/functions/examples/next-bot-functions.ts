@@ -102,6 +102,7 @@ export async function collectBlock(bot: Bot, blockType: string, num = 1, exclude
 }
 
 LLMFunctions.register({
+    group: "survival",
     name: "collect_block",
     description: "Collect a block of the given type",
     schema: z.object({

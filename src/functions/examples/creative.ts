@@ -1,7 +1,5 @@
 import type { Bot } from "../../bot";
 import { LLMFunctions } from "../llm-functions";
-import { getNearbyEntities } from "./base-bot-functions";
-import type { Entity } from "prismarine-entity";
 
 import z from "zod"
 
@@ -12,6 +10,7 @@ import data_loader from "minecraft-data";
 const Data = data_loader("1.21.1");
 
 LLMFunctions.register({
+    group: "creative",
     name: "take_item_from_creative",
     description: "Creative mode only. Takes item or block from creative mode menu and places it into active quickbar slot.",
     schema: z.object({
@@ -31,3 +30,5 @@ LLMFunctions.register({
         }
     }
 })
+
+
