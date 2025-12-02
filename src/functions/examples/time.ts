@@ -1,17 +1,16 @@
 import { LLMFunctions } from "../llm-functions";
+import type { Bot } from "../../bot";
+import z from "zod";
 
 LLMFunctions.register({
     name: "time",
     description: "Get the current time",
-    parameters: {
-        type: "object",
-        properties: {
-            format: { type: "string", description: "The format of the time" }
+    schema: z.object({
+        locale: z.string().describe("The JavaScript locale of the time")
+    }),
+    handler: async (bot: Bot, args) => {
+        return {
+            message: new Date().toLocaleTimeString(args.locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
         }
-    },
-    handler: (args: { format: string }) => {
-        return new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-    },
-    strict: true,
-    type: 'function'
+    }
 })

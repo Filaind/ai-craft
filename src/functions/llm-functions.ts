@@ -10,7 +10,7 @@ import type { Bot } from "../bot";
 type LLMFunctionGroup = "mining" | "fighting" | "creative"
 
 export interface LLMFunctionResult {
-    message: string
+    message: any
     stop_calling?: boolean
 }
 

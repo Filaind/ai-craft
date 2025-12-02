@@ -3,6 +3,8 @@ import { LLMFunctions } from "../llm-functions";
 import { getNearbyEntities } from "./base-bot-functions";
 import type { Entity } from "prismarine-entity";
 
+import z from "zod";
+
 export async function discard(bot: Bot, itemName: string, num = -1) {
     /**
      * Discard the given item.
@@ -64,28 +66,23 @@ export async function giveToPlayer(bot: Bot, itemType: string, entity: Entity, n
 
 LLMFunctions.register({
     name: "give_item_to_entity",
-    description: "",
-    parameters: {
-        type: "object",
-        properties: {
-            item_type: { type: "string", description: "The type of the item to give" },
-            entity_id: { type: "number", description: "The id of the entity to give the item to" },
-            num: { type: "number", description: "The number of items to give" }
-        }
-    },
-    handler: async (args: { bot: Bot, item_type: string, entity_id: number, num: number }) => {
-        let entities = getNearbyEntities(args.bot, 1000)
+    description: "Give an item to an player or entity",
+    schema: z.object({
+        item_type: z.string().describe("The type of the item to give"),
+        entity_id: z.number().describe("The id of the entity to give the item to"),
+        num: z.number().describe("The number of items to give")
+    }),
+    handler: async (bot: Bot, args) => {
+        let entities = getNearbyEntities(bot, 1000)
         entities = entities.filter((entity) => entity!.id === args.entity_id)
         if (entities.length === 0) {
             return "Entity not found"
         }
-        const res = await giveToPlayer(args.bot, args.item_type, entities[0]!, args.num);
+        const res = await giveToPlayer(bot, args.item_type, entities[0]!, args.num);
         console.log(res)
         return {
             message: res,
             //stop_calling: true
         }
-    },
-    strict: true,
-    type: 'function'
+    }
 })  

@@ -29,5 +29,5 @@ LLMFunctions.register({
         return {
             message: `${item?.displayName} is now in your hand`
         }
-    },
+    }
 })

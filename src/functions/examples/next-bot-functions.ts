@@ -7,6 +7,8 @@ import type { Bot as MineflayerBot } from "mineflayer";
 import 'ses';
 import { Vec3 } from 'vec3';
 
+import z from "zod";
+
 export function getNearestBlocksWhere(bot: Bot, predicate: (block: Block) => boolean, distance = 8, count = 10000) {
     const mineflayerBot = bot.mineflayerBot!;
 
@@ -102,19 +104,14 @@ export async function collectBlock(bot: Bot, blockType: string, num = 1, exclude
 LLMFunctions.register({
     name: "collect_block",
     description: "Collect a block of the given type",
-    parameters: {
-        type: "object",
-        properties: {
-            block_type: { type: "string", description: "The type of the block to collect, for example 'oak_log', 'coal_ore', 'diamond_ore', 'emerald_ore', 'iron_ore', 'gold_ore', 'lapis_lazuli_ore', 'redstone_ore', 'dirt', 'cobblestone', 'stone', 'grass_block', 'water', 'lava', 'obsidian' etc." },
-            num: { type: "number", description: "The number of blocks to collect" }
-        }
-    },
-    handler: async (args: { bot: Bot, block_type: string, num: number }) => {
-        const res = await collectBlock(args.bot, args.block_type, args.num);
+    schema: z.object({
+        block_type: z.string().describe("The type of the block to collect, for example 'oak_log', 'coal_ore', 'diamond_ore', 'emerald_ore', 'iron_ore', 'gold_ore', 'lapis_lazuli_ore', 'redstone_ore', 'dirt', 'cobblestone', 'stone', 'grass_block', 'water', 'lava', 'obsidian' etc."),
+        num: z.number().describe("The number of blocks to collect")
+    }),
+    handler: async (bot: Bot, args) => {
+        const res = await collectBlock(bot, args.block_type, args.num);
         return "Collected " + args.block_type + " blocks";
-    },
-    strict: true,
-    type: 'function'
+    }
 })
 
 
@@ -141,21 +138,13 @@ bot.placeBlock(referenceBlock, faceVector)
 LLMFunctions.register({
     name: "execute_mineflayer_code",
     description: "Execute mineflayer TS code for complex tasks",
-    parameters: {
-        type: "object",
-        properties: {
-            code: {
-                type: "string",
-                description: exampleCode
-            }
-        }
-    },
-    handler: async (args: { bot: Bot, code: string }) => {
-
-
+    schema: z.object({
+        code: z.string().describe(exampleCode)
+    }),
+    handler: async (bot: Bot, args) => {
         console.log("Executing code: " + args.code);
 
-        const mineflayerBot = args.bot.mineflayerBot;
+        const mineflayerBot = bot.mineflayerBot;
 
         const func = makeCompartment({
             require,
@@ -170,7 +159,5 @@ LLMFunctions.register({
         await func(mineflayerBot!);
 
         return 'done'
-    },
-    strict: false,
-    type: 'function'
+    }
 })  

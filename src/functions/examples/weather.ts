@@ -1,23 +1,23 @@
+import type { Bot } from "../../bot";
 import { LLMFunctions } from "../llm-functions";
 
+import z from "zod";
+
 LLMFunctions.register({
-    name: "weather",
+    name: "get_weather",
     description: "Get the current weather",
-    parameters: {
-        type: "object",
-        properties: {
-            city: { type: "string", description: "The city to get the weather for" }
-        }
-    },
-    handler: (args: { format: string }) => {
+    schema: z.object({
+        city: z.string().describe("The city to get the weather for")
+    }),
+    handler: async (bot: Bot, args) => {
         return {
-            temperature: 20,
-            humidity: 50,
-            pressure: 1013,
-            wind_speed: 5,
-            wind_direction: "N"
+            message: {
+                temperature: 20,
+                humidity: 50,
+                pressure: 1013,
+                wind_speed: 5,
+                wind_direction: "N"
+            }
         }
-    },
-    strict: true,
-    type: 'function'
+    }
 })
