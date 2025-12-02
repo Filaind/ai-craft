@@ -10,26 +10,27 @@ import data_loader from "minecraft-data";
 const Data = data_loader("1.21.1");
 
 LLMFunctions.register({
-    name: "take_block_from_creative",
-    description: "Creative mode only. Takes block from creative mode menu and places it into active quickbar slot.",
+    name: "take_item_from_creative",
+    description: "Creative mode only. Takes item or block from creative mode menu and places it into active quickbar slot.",
     parameters: {
         type: "object",
         properties: {
-            block_id: { type: "string", description: "Minecraft block id. No tag needed, e.g. \"stone\" or similar." }
+            item_id: { type: "string", description: "Minecraft item id. No tag needed, e.g. \"stone\" or similar." },
+            amount: { type: "number", description: "Amount of items to take. Minimum is 1, maximum is 64." }
         }
     },
-    function: async (args: { bot: Bot, block_id: string }) => {
-        const block = Data.itemsByName[args.block_id];
-        if (!block) {
-            return `Block ID ${args.block_id} is invalid!`;
+    function: async (args: { bot: Bot, item_id: string, amount: number }) => {
+        const item = Data.itemsByName[args.item_id];
+        if (!item) {
+            return `Item ID ${args.item_id} is invalid!`;
         }
-        const item = new Item(block.id, 1);
+        const new_item = new Item(item.id, args.amount);
         const inventorySlot = args.bot.mineflayerBot!.inventory.hotbarStart + args.bot.mineflayerBot!.quickBarSlot;
-        await args.bot.mineflayerBot!.creative.setInventorySlot(inventorySlot, item)
+        await args.bot.mineflayerBot!.creative.setInventorySlot(inventorySlot, new_item)
         return {
-            message: `${block?.displayName} is now in your hand`
+            message: `${item?.displayName} is now in your hand`
         }
     },
     strict: true,
     type: 'function'
-})  
+})
