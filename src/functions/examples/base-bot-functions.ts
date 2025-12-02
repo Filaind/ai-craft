@@ -12,11 +12,7 @@ export function getNearbyEntities(bot: Bot, maxDistance = 16) {
         entities.push({ entity: entity, distance: distance });
     }
     entities.sort((a, b) => a.distance - b.distance);
-    let res = [];
-    for (let i = 0; i < entities.length; i++) {
-        res.push(entities[i]?.entity);
-    }
-    return res;
+    return entities;
 }
 
 LLMFunctions.register({
@@ -55,7 +51,7 @@ LLMFunctions.register({
         entity_id: z.number().describe("The id of the entity to attack")
     }),
     handler: async (bot: Bot, args) => {
-        let entities = getNearbyEntities(bot, 1000)
+        let entities = getNearbyEntities(bot, 1000).map((entity) => entity.entity);
         entities = entities.filter((entity) => entity!.id === args.entity_id)
         if (entities.length === 0) {
             return "Entity not found"
@@ -76,7 +72,13 @@ LLMFunctions.register({
     }),
     handler: async (bot: Bot, args) => {
         return {
-            message: getNearbyEntities(bot, args.max_distance)
+            message: getNearbyEntities(bot, args.max_distance).map(({entity, distance}) => ({
+                distance,
+                id: entity.id,
+                position: entity.position,
+                name: entity.name,
+                ...(entity.username && { username: entity.username })
+            }))
         }
     }
 })

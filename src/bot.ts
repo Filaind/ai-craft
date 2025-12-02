@@ -36,12 +36,18 @@ export class Bot {
         this.mineflayerBot.on('kicked', console.log)
         this.mineflayerBot.on('error', console.log)
 
+        this.mineflayerBot.on('game', this.onGameStateChanged.bind(this))
+        
         //@ts-ignore
         this.mineflayerBot.on('stoppedAttacking', this.onStoppedAttacking.bind(this))
     }
 
     getBotDataPath() {
         return `${Bot.BOT_DATA_PATH}/${this.mineflayerBot!.username}`;
+    }
+
+    async onGameStateChanged() {
+        console.log('Gamemode changed to', this.mineflayerBot!.game.gameMode);
     }
 
     async onSpawn() {

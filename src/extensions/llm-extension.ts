@@ -150,7 +150,7 @@ export class LLMExtension extends BaseBotExtension {
                     content: choice.message.content!
                 })
 
-                this.tidyMemory();
+                //this.tidyMemory();
                 this.saveMemory();
 
                 //Если нет tool calls, то возвращаем ответ
