@@ -1,7 +1,7 @@
 import mineflayer, { type BotOptions } from 'mineflayer'
 import { pathfinder } from 'mineflayer-pathfinder';
 import * as pvp from 'mineflayer-pvp';
-import { LLMExtension } from './extensions/llm-extension-test';
+import { LLMExtension } from './extensions/llm-extension';
 import OpenAI from 'openai';
 import fs from 'fs';
 import type { Entity } from 'prismarine-entity';
