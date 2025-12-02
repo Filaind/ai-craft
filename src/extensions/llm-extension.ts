@@ -1,8 +1,9 @@
 import OpenAI from "openai";
-import { type LLMFunctionResult, LLMFunctions, LLMFunctionsCache } from "../functions/llm-functions";
+import { type LLMFunctionResult, type LLMFunctionGroup, LLMFunctions, LLMFunctionsCache } from "../functions/llm-functions";
 import type { ChatCompletionMessageParam } from "openai/resources";
 import { BaseBotExtension } from "./base-bot-extension";
 import type { Bot } from "../bot";
+import type { GameMode } from "mineflayer"
 import fs from 'fs';
 
 type ChatMessage = ChatCompletionMessageParam & {
@@ -29,6 +30,14 @@ export class LLMExtension extends BaseBotExtension {
 
         //this.loadMemory();
 
+    }
+
+    setGamemode(gameMode: GameMode) {
+        const GAMEMODES: GameMode[] = ["survival", "creative", "adventure", "spectator"];
+        let groups = this.toolsCache.groups;
+        GAMEMODES.forEach((v) => groups.delete(v));
+        groups.add(gameMode);
+        this.toolsCache.groups = groups;
     }
 
     loadMemory() {

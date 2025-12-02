@@ -11,6 +11,8 @@ export class Bot {
     public mineflayerBot?: mineflayer.Bot;
     private llm: LLMExtension;
 
+    private lastGameMode: mineflayer.GameMode = "survival";
+
     private static BOT_DATA_PATH: string = 'bots-data';
 
 
@@ -47,10 +49,18 @@ export class Bot {
     }
 
     async onGameStateChanged() {
-        console.log('Gamemode changed to', this.mineflayerBot!.game.gameMode);
+        let gameMode = this.mineflayerBot!.game.gameMode;
+        if (gameMode != this.lastGameMode) {
+            this.lastGameMode = gameMode;
+            this.llm.setGamemode(this.lastGameMode);
+            console.log('Gamemode changed to', this.mineflayerBot!.game.gameMode);
+        }
     }
 
     async onSpawn() {
+        this.lastGameMode = this.mineflayerBot!.game.gameMode;
+        this.llm.setGamemode(this.lastGameMode);
+
         fs.mkdirSync(this.getBotDataPath(), { recursive: true });
 
         console.log("Bot spawned", this.mineflayerBot!.username);

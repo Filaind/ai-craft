@@ -136,6 +136,7 @@ bot.placeBlock(referenceBlock, faceVector)
 `;
 
 LLMFunctions.register({
+    group: "unsafe",
     name: "execute_mineflayer_code",
     description: "Execute mineflayer TS code for complex tasks",
     schema: z.object({

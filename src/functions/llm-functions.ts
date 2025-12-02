@@ -1,13 +1,13 @@
 import fs from 'fs'
-
 import z from 'zod'
 
 import type { Bot } from "../bot";
+import type { GameMode } from "mineflayer"
 
 /**
  * LLM Function groups. Used to limit the tools available for LLM to call.
  */
-type LLMFunctionGroup = "mining" | "fighting" | "creative"
+export type LLMFunctionGroup = "mining" | "fighting" | "unsafe" | GameMode
 
 export interface LLMFunctionResult {
     message: any
