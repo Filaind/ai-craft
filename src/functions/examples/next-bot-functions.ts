@@ -115,6 +115,30 @@ LLMFunctions.register({
     }
 })
 
+LLMFunctions.register({
+    name: "place_block",
+    description: "Place batch of blocks of the given type.",
+    schema: z.object({
+        blocks: z.array(
+            z.tuple([
+                z.number().describe("x"),
+                z.number().describe("y"), 
+                z.number().describe("z"),
+                z.string().describe("block type, for example 'oak_log', 'coal_ore', 'diamond_ore', 'emerald_ore', 'iron_ore', 'gold_ore', 'lapis_lazuli_ore', 'redstone_ore', 'dirt', 'cobblestone', 'stone', 'grass_block', 'water', 'lava', 'obsidian' etc.")
+            ])
+        ).max(50).describe("List of blocks as [x,y,z,type]")
+    }),
+    handler: async (bot: Bot, args) => {
+        for (const [x, y, z, block_type] of args.blocks) {
+            const setblockCommand = `/setblock ${x} ${y} ${z} ${block_type}`;
+            bot.mineflayerBot!.chat(setblockCommand);
+        }
+
+        return "Blocks placed";
+    }
+})
+
+
 
 export const makeCompartment = (endowments = {}) => {
     return new Compartment({

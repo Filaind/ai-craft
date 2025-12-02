@@ -34,7 +34,7 @@ LLMFunctions.register({
 
             const defaultMove = new Movements(bot.mineflayerBot!)
             bot.mineflayerBot!.pathfinder.setMovements(defaultMove)
-            bot.mineflayerBot!.pathfinder.setGoal(new goals.GoalNear(args.x, args.y, args.z, 1))
+            bot.mineflayerBot!.pathfinder.setGoal(new goals.GoalNear(args.x, args.y, args.z, 2))
         })
 
         await promise
@@ -69,7 +69,7 @@ LLMFunctions.register({
     name: "get_nearby_entities",
     description: "Get the nearby entities",
     schema: z.object({
-        max_distance: z.number().describe("The maximum distance to search for entities")
+        max_distance: z.number().describe("The maximum distance to search for entities. Use 1000 for unlimited distance.")
     }),
     handler: async (bot: Bot, args) => {
         return {
@@ -83,3 +83,20 @@ LLMFunctions.register({
         }
     }
 })
+
+LLMFunctions.register({
+    name: "set_todo_list",
+    description: "Set the todo list",
+    schema: z.object({
+        todo_list: z.string().describe("Write detailed description of the todo list. Use markdown format")
+    }),
+    handler: async (bot: Bot, args) => {
+        bot.todoList = args.todo_list
+
+        //bot.mineflayerBot!.chat("%" + "TODO LIST: " + args.todo_list)
+        return {
+            message: "Todo list set"
+        }
+    }
+})
+

@@ -1,7 +1,7 @@
 import mineflayer, { type BotOptions } from 'mineflayer'
 import { pathfinder } from 'mineflayer-pathfinder';
 import * as pvp from 'mineflayer-pvp';
-import { LLMExtension } from './extensions/llm-extension';
+import { LLMExtension } from './extensions/llm-extension-test';
 import OpenAI from 'openai';
 import fs from 'fs';
 import type { Entity } from 'prismarine-entity';
@@ -14,6 +14,8 @@ export class Bot {
     private lastGameMode: mineflayer.GameMode = "survival";
 
     private static BOT_DATA_PATH: string = 'bots-data';
+
+    public todoList: string = ""
 
 
     constructor(options: BotOptions, llmClient: OpenAI) {
@@ -38,7 +40,7 @@ export class Bot {
         this.mineflayerBot.on('kicked', console.log)
         this.mineflayerBot.on('error', console.log)
 
-        this.mineflayerBot.on('game', this.onGameStateChanged.bind(this))
+        //this.mineflayerBot.on('game', this.onGameStateChanged.bind(this))
         
         //@ts-ignore
         this.mineflayerBot.on('stoppedAttacking', this.onStoppedAttacking.bind(this))
@@ -57,10 +59,11 @@ export class Bot {
     }
 
     async onSpawn() {
+        fs.mkdirSync(this.getBotDataPath(), { recursive: true });
+        
         this.lastGameMode = this.mineflayerBot!.game.gameMode;
         this.llm.setGamemode(this.lastGameMode);
 
-        fs.mkdirSync(this.getBotDataPath(), { recursive: true });
 
         console.log("Bot spawned", this.mineflayerBot!.username);
         const entity = this.mineflayerBot!.nearestEntity()
@@ -85,7 +88,7 @@ export class Bot {
 
 
     async onStoppedAttacking(entity: any) {
-        const response = await this.llm.getResponse("End attacking")
+        const response = await this.llm.getResponse("Done attacking")
         this.mineflayerBot!.chat("%" + response)
     }
 }
