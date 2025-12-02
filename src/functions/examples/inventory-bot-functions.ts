@@ -74,11 +74,11 @@ LLMFunctions.register({
     }),
     handler: async (bot: Bot, args) => {
         let entities = getNearbyEntities(bot, 1000)
-        entities = entities.filter((entity) => entity!.id === args.entity_id)
+        entities = entities.filter((entity) => entity.entity!.id === args.entity_id)
         if (entities.length === 0) {
             return "Entity not found"
         }
-        const res = await giveToPlayer(bot, args.item_type, entities[0]!, args.num);
+        const res = await giveToPlayer(bot, args.item_type, entities[0]!.entity, args.num);
         console.log(res)
         return {
             message: res,
