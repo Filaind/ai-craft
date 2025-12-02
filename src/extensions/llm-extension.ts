@@ -41,7 +41,8 @@ export class LLMExtension extends BaseBotExtension {
         this.toolsCache.groups = groups;
         this.saveTools();
 
-        console.log(`Gamemode changed to ${gameMode}`);
+        console.log(`Gamemode changed to ${gameMode}. Tools:`);
+        console.log(JSON.stringify(this.toolsCache.tools, null, 2))
     }
 
     loadMemory() {
