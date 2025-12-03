@@ -5,7 +5,7 @@ import { BaseAgentExtension } from "./base-agent-extension";
 import type { Agent } from "../agent";
 import type { GameMode } from "mineflayer"
 import fs from 'fs';
-import signale from 'signale';
+import { logger } from "../../index";
 
 
 
@@ -50,8 +50,10 @@ export class LLMExtension extends BaseAgentExtension {
         })
 
         const allTools = LLMFunctions.getOpenAiTools();
+        logger.info(`[LLM] Loading ${allTools.length} available tools`);
+
         allTools.forEach((tool) => {
-            if(tool.gameMode) {
+            if (tool.gameMode) {
                 this.gameModeTools[tool.gameMode].push(tool);
             } else {
                 for (let value of Object.values(this.gameModeTools)) {
@@ -60,19 +62,27 @@ export class LLMExtension extends BaseAgentExtension {
             }
         });
 
+        logger.debug(`[LLM] Tools by game mode: survival=${this.gameModeTools.survival.length}, creative=${this.gameModeTools.creative.length}, adventure=${this.gameModeTools.adventure.length}, spectator=${this.gameModeTools.spectator.length}`);
+
         //this.saveTools();
 
         //this.loadMemory();
     }
 
     loadMemory() {
-        if (fs.existsSync(`${this.agent.getBotDataPath()}/memory.json`)) {
-            this.messages = JSON.parse(fs.readFileSync(`${this.agent.getBotDataPath()}/memory.json`, 'utf8'));
+        const memoryPath = `${this.agent.getBotDataPath()}/memory.json`;
+        if (fs.existsSync(memoryPath)) {
+            this.messages = JSON.parse(fs.readFileSync(memoryPath, 'utf8'));
+            logger.info(`[Memory] Loaded ${this.messages.length} messages from memory`);
+        } else {
+            logger.info('[Memory] No existing memory file found, starting fresh');
         }
     }
 
     saveMemory() {
-        fs.writeFileSync(`${this.agent.getBotDataPath()}/memory.json`, JSON.stringify(this.messages, null, 2));
+        const memoryPath = `${this.agent.getBotDataPath()}/memory.json`;
+        fs.writeFileSync(memoryPath, JSON.stringify(this.messages, null, 2));
+        logger.debug(`[Memory] Saved ${this.messages.length} messages to memory`);
     }
 
     saveTools() {
@@ -115,10 +125,7 @@ export class LLMExtension extends BaseAgentExtension {
             }
         })
 
-        signale.start({
-            prefix: '[LLM]',
-            message: 'Request'
-        });
+        logger.info('[LLM] Starting request');
         const startTime = Date.now();
         try {
             let tools = this.gameModeTools[this.agent.mineflayerBot!.game.gameMode]
@@ -127,11 +134,8 @@ export class LLMExtension extends BaseAgentExtension {
                 function: t.function
             }));
 
-            signale.info({
-                prefix: '[LLM]',
-                message: 'Tools in request: ' + tools.map((t) => t.function.name).join(', ')
-            });
-            
+            logger.debug(`[LLM] Available tools: ${tools.map((t) => t.function.name).join(', ')}`);
+
             const response = await this.client.chat.completions.create({
                 model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
                 tool_choice: "auto",
@@ -147,16 +151,14 @@ export class LLMExtension extends BaseAgentExtension {
                     ...this.messages
                 ],
             });
-            signale.success({
-                prefix: '[LLM]',
-                message: `Request finished. Time taken: ${Date.now() - startTime} ms`,
-            });
+            logger.info(`[LLM] Request completed in ${Date.now() - startTime}ms`);
 
             const choice = response.choices[0]!
 
             //Если есть tool calls, то вызываем функции
             if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
-                
+                logger.info(`[LLM] Processing ${choice.message.tool_calls.length} tool call(s)`);
+
                 //Добавляем сообщение ассистента с tool_calls в историю
                 this.messages.push({
                     role: "assistant",
@@ -167,11 +169,7 @@ export class LLMExtension extends BaseAgentExtension {
                 for (const tool_call of choice.message.tool_calls) {
                     if (tool_call.type == "function") {
 
-                        console.log("\n\n")
-                        signale.info({
-                            prefix: '[Tool call]',
-                            message: tool_call
-                        });
+                        logger.debug({ tool_call }, `[Tool call] Executing: `);
 
                         const function_name = tool_call.function.name
 
@@ -192,13 +190,9 @@ export class LLMExtension extends BaseAgentExtension {
                         // this.bot.mineflayerBot!.chat("Calling function: " + function_name + " with arguments: " + tool_call.function.arguments)
 
                         const ret = await LLMFunctions.invokeFunction(function_name, this.agent, function_arguments)
-                        const result: LLMFunctionResult = (typeof(ret) == "string") ? { message: ret } : ret;
+                        const result: LLMFunctionResult = (typeof (ret) == "string") ? { message: ret } : ret;
 
-                        signale.success({
-                            prefix: '[Tool call]',
-                            message: `Result: ${JSON.stringify(result.message)}`
-                        });
-                        console.log("\n\n")
+                        logger.debug({ result }, `[Tool call] Result: `);
 
                         this.messages.push({
                             role: "tool",
@@ -218,7 +212,7 @@ export class LLMExtension extends BaseAgentExtension {
 
                         //Костыль для остановки вызова функций. Например если боту надо сначала дойти до цели, то мы останавливаем вызов функций и возвращаем сообщение.
                         if (result.stop_calling) {
-                            console.log("Stop calling functions")
+                            logger.warn(`[Tool call] Stopping function calls due to stop_calling flag from ${function_name}`)
                             return result.message
                         }
                     }
@@ -231,7 +225,7 @@ export class LLMExtension extends BaseAgentExtension {
                 //Модель обосралась на вызовы функций, иногда возвращает reasoning вместо content
                 //choice.message.reasoning - не существует в openai
                 //@ts-ignore
-                if(choice.message.role == "assistant" && choice.message.content == null) {
+                if (choice.message.role == "assistant" && choice.message.content == null) {
                     this.messages.push({
                         role: "assistant",
                         //@ts-ignore
@@ -251,18 +245,12 @@ export class LLMExtension extends BaseAgentExtension {
                 this.saveMemory();
 
                 //Если нет tool calls, то возвращаем ответ
-                signale.success({
-                    prefix: '[LLM]',
-                    message: `Finish response: ${choice.message.content!}`
-                });
+                logger.info(`[LLM] Finish response: ${choice.message.content!}`);
                 return choice.message.content!
             }
 
         } catch (error) {
-            signale.error({
-                prefix: '[LLM]',
-                message: `Error: ${JSON.stringify(error, null, 2)}`
-            });
+            logger.error(`[LLM] Error: ${JSON.stringify(error, null, 2)}`);
             return 'Error in LLM request'
         }
     }
