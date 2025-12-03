@@ -1,13 +1,19 @@
 import fs from 'fs'
 import z from 'zod'
 
+import OpenAI from 'openai'
+
 import type { Agent } from "../agent";
 import type { GameMode } from "mineflayer"
+
+export type LLMFunctionTool = {group?: LLMFunctionGroup, gameMode?: GameMode} & OpenAI.ChatCompletionFunctionTool
 
 /**
  * LLM Function groups. Used to limit the tools available for LLM to call.
  */
 export type LLMFunctionGroup = "mining" | "fighting" | "unsafe"
+
+export type LLMFunctionGroups = LLMFunctionGroup | LLMFunctionGroup[]
 
 export interface LLMFunctionResult {
     message: any
@@ -98,15 +104,21 @@ export class LLMFunctions {
      * @param groups - list of function groups to include in tools
      * @returns list to pass into 'tools'
      */
-    public static getOpenAiTools(): { name: string, group?: LLMFunctionGroup, gameMode?: GameMode, description?: string, parameters: object }[] {
+    public static getOpenAiTools(): LLMFunctionTool[] {
         // getting functions that have no group, or it's group is listed in "groups"
-        return this.llmFunctions.map(({ name, description, schema, group, gameMode }) => ({
-            name: name,
-            group: group,
-            gameMode: gameMode,
-            description: description,
-            parameters: this.toJSONSchema(schema)
-        }));
+        return this.llmFunctions.map(({ name, description, schema, group, gameMode }) => {
+            let function_tool: LLMFunctionTool = {
+                type: "function",
+                function: {
+                    name: name,
+                    parameters: this.toJSONSchema(schema),
+                    description: description
+                }
+            }
+            if (group != undefined) function_tool.group = group;
+            if (gameMode != undefined) function_tool.gameMode = gameMode;
+            return function_tool;
+        });
     }
 
     public static register<T extends z.ZodObject>(config: LLMFunctionInfo<T>) {

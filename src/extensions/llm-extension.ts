@@ -1,11 +1,10 @@
 import OpenAI from "openai";
-import { type LLMFunctionResult, LLMFunctions } from "../functions/llm-functions";
+import { type LLMFunctionTool, type LLMFunctionGroup, type LLMFunctionGroups, type LLMFunctionResult, LLMFunctions } from "../functions/llm-functions";
 import type { ChatCompletionMessageParam } from "openai/resources";
 import { BaseAgentExtension } from "./base-agent-extension";
 import type { Agent } from "../agent";
 import type { GameMode } from "mineflayer"
 import fs from 'fs';
-
 
 type ChatMessage = ChatCompletionMessageParam & {
     tool_name?: string;
@@ -27,8 +26,9 @@ export class LLMExtension extends BaseAgentExtension {
     private client: OpenAI;
     private messages: ChatMessage[] = [];
     private functionCallHistory: string[] = [];
+    private groups: Set<LLMFunctionGroup> = new Set();
 
-    private gameModeTools: Record<GameMode, any[]> = {
+    private gameModeTools: Record<GameMode, LLMFunctionTool[]> = {
         "survival": [],
         "creative": [],
         "adventure": [],
@@ -48,17 +48,11 @@ export class LLMExtension extends BaseAgentExtension {
 
         const allTools = LLMFunctions.getOpenAiTools();
         allTools.forEach((tool) => {
-            const actual_tool = {
-                type: "function",
-                function: {
-                    ...tool
-                }
-            }
             if(tool.gameMode) {
-                this.gameModeTools[tool.gameMode].push(actual_tool);
+                this.gameModeTools[tool.gameMode].push(tool);
             } else {
                 for (let value of Object.values(this.gameModeTools)) {
-                    value.push(actual_tool);
+                    value.push(tool);
                 }
             }
         });
@@ -67,7 +61,6 @@ export class LLMExtension extends BaseAgentExtension {
 
         //this.loadMemory();
     }
-
 
     loadMemory() {
         if (fs.existsSync(`${this.agent.getBotDataPath()}/memory.json`)) {
@@ -91,6 +84,17 @@ export class LLMExtension extends BaseAgentExtension {
         this.functionCallHistory = [];
     }
 
+    canCall(group?: LLMFunctionGroups) {
+        if (!group) return true;
+        if (this.groups.size == 0) false;
+        if (Array.isArray(group)) {
+            for (let g of group) {
+                if (!this.groups.has(g)) return false
+            }
+            return true;
+        }
+        return this.groups.has(group);
+    }
 
     async getResponse(newMessage?: string): Promise<string> {
         if (newMessage) {
@@ -111,8 +115,11 @@ export class LLMExtension extends BaseAgentExtension {
         console.log('LLM request');
         try {
             let tools = this.gameModeTools[this.agent.mineflayerBot!.game.gameMode]
+            tools = tools.filter((t) => this.canCall(t.group)).map((t) => ({
+                type: "function",
+                function: t.function
+            }));
             
-
             const response = await this.client.chat.completions.create({
                 model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
                 tool_choice: "auto",
