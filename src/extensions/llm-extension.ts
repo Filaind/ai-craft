@@ -5,6 +5,9 @@ import { BaseAgentExtension } from "./base-agent-extension";
 import type { Agent } from "../agent";
 import type { GameMode } from "mineflayer"
 import fs from 'fs';
+import signale from 'signale';
+
+
 
 type ChatMessage = ChatCompletionMessageParam & {
     tool_name?: string;
@@ -112,7 +115,10 @@ export class LLMExtension extends BaseAgentExtension {
             }
         })
 
-        console.log('LLM request start');
+        signale.start({
+            prefix: '[LLM]',
+            message: 'Request'
+        });
         const startTime = Date.now();
         try {
             let tools = this.gameModeTools[this.agent.mineflayerBot!.game.gameMode]
@@ -121,7 +127,10 @@ export class LLMExtension extends BaseAgentExtension {
                 function: t.function
             }));
 
-            console.log('LLM Tools in request: ', tools.map((t) => t.function.name));
+            signale.info({
+                prefix: '[LLM]',
+                message: 'Tools in request: ' + tools.map((t) => t.function.name).join(', ')
+            });
             
             const response = await this.client.chat.completions.create({
                 model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
@@ -138,7 +147,10 @@ export class LLMExtension extends BaseAgentExtension {
                     ...this.messages
                 ],
             });
-            console.log('LLM request end. Time taken:', Date.now() - startTime, 'ms');
+            signale.success({
+                prefix: '[LLM]',
+                message: `Request finished. Time taken: ${Date.now() - startTime} ms`,
+            });
 
             const choice = response.choices[0]!
 
@@ -155,7 +167,11 @@ export class LLMExtension extends BaseAgentExtension {
                 for (const tool_call of choice.message.tool_calls) {
                     if (tool_call.type == "function") {
 
-                        console.log(tool_call)
+                        console.log("\n\n")
+                        signale.info({
+                            prefix: '[Tool call]',
+                            message: tool_call
+                        });
 
                         const function_name = tool_call.function.name
 
@@ -177,6 +193,12 @@ export class LLMExtension extends BaseAgentExtension {
 
                         const ret = await LLMFunctions.invokeFunction(function_name, this.agent, function_arguments)
                         const result: LLMFunctionResult = (typeof(ret) == "string") ? { message: ret } : ret;
+
+                        signale.success({
+                            prefix: '[Tool call]',
+                            message: `Result: ${JSON.stringify(result.message)}`
+                        });
+                        console.log("\n\n")
 
                         this.messages.push({
                             role: "tool",
@@ -229,13 +251,18 @@ export class LLMExtension extends BaseAgentExtension {
                 this.saveMemory();
 
                 //Если нет tool calls, то возвращаем ответ
-                console.log("LLM finish response:", choice.message.content!)
+                signale.success({
+                    prefix: '[LLM]',
+                    message: `Finish response: ${choice.message.content!}`
+                });
                 return choice.message.content!
             }
 
         } catch (error) {
-            console.log(error)
-            console.error('Error in LLM request', JSON.stringify(error, null, 2))
+            signale.error({
+                prefix: '[LLM]',
+                message: `Error: ${JSON.stringify(error, null, 2)}`
+            });
             return 'Error in LLM request'
         }
     }
