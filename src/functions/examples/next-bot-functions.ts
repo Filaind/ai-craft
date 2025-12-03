@@ -116,6 +116,8 @@ LLMFunctions.register({
 })
 
 LLMFunctions.register({
+    gameMode: "creative",
+    group: "unsafe",
     name: "place_block",
     description: "Place batch of blocks of the given type.",
     schema: z.object({
@@ -161,6 +163,7 @@ bot.placeBlock(referenceBlock, faceVector)
 `;
 
 LLMFunctions.register({
+    gameMode: "creative",
     group: "unsafe",
     name: "execute_mineflayer_code",
     description: "Execute mineflayer TS code for complex tasks",

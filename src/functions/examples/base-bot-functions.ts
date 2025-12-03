@@ -17,6 +17,7 @@ export function getNearbyEntities(bot: Bot, maxDistance = 16) {
 }
 
 LLMFunctions.register({
+    gameMode: "any",
     name: "walk_to_position",
     description: "Walk to specified coordinates",
     schema: z.object({
@@ -36,6 +37,7 @@ LLMFunctions.register({
 })
 
 LLMFunctions.register({
+    gameMode: "any",
     name: "walk_to_entity",
     description: "Walk to entity that is specified by entity_id. List of nearby entities can be obtained using get_nearby_entities.",
     schema: z.object({
@@ -58,6 +60,7 @@ LLMFunctions.register({
 })
 
 LLMFunctions.register({
+    gameMode: "any",
     name: "attack_entity",
     description: "You can use this function to attack an entity or mobs for farm or other purposes",
     schema: z.object({
@@ -76,6 +79,7 @@ LLMFunctions.register({
 })
 
 LLMFunctions.register({
+    gameMode: "any",
     name: "get_nearby_entities",
     description: "Get the nearby entities",
     schema: z.object({
@@ -94,6 +98,7 @@ LLMFunctions.register({
 })
 
 LLMFunctions.register({
+    gameMode: "any",
     name: "set_todo_list",
     description: "Set the todo list",
     schema: z.object({
