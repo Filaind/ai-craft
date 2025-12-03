@@ -1,4 +1,4 @@
-import type { Bot } from "../../bot";
+import type { Agent } from "../../agent";
 import { LLMFunctions } from "../llm-functions";
 import { Movements, goals } from "mineflayer-pathfinder";
 
@@ -19,14 +19,14 @@ LLMFunctions.register({
         item_id: z.string().describe("Minecraft item id. No tag needed, e.g. \"stone\" or similar."),
         amount: z.int().min(1).max(64).describe("Amount of items to take")
     }),
-    handler: async (bot: Bot, args) => {
+    handler: async (agent: Agent, args) => {
         const item = Data.itemsByName[args.item_id];
         if (!item) {
             return `Item ID ${args.item_id} is invalid!`;
         }
         const new_item = new Item(item.id, args.amount);
-        const inventorySlot = bot.mineflayerBot!.inventory.hotbarStart + bot.mineflayerBot!.quickBarSlot;
-        await bot.mineflayerBot!.creative.setInventorySlot(inventorySlot, new_item)
+        const inventorySlot = agent.mineflayerBot!.inventory.hotbarStart + agent.mineflayerBot!.quickBarSlot;
+        await agent.mineflayerBot!.creative.setInventorySlot(inventorySlot, new_item)
         return {
             message: `${item?.displayName} is now in your hand`
         }
@@ -42,8 +42,8 @@ LLMFunctions.register({
         y: z.int(),
         z: z.int(),
     }),
-    handler: async (bot: Bot, args) => {
-        const mbot = bot.mineflayerBot!;
+    handler: async (agent: Agent, args) => {
+        const mbot = agent.mineflayerBot!;
         const pos = new Vec3(args.x, args.y, args.z);
         const pos_str = `(${pos.x}, ${pos.y}, ${pos.z})`;
 
@@ -52,8 +52,8 @@ LLMFunctions.register({
         let distance = mbot.entity.position.distanceTo(pos);
         if (distance > 4) return `Block is too far! Distance: ${distance}`;
 
-        const defaultMove = new Movements(bot.mineflayerBot!)
-        bot.mineflayerBot!.pathfinder.setMovements(defaultMove)
+        const defaultMove = new Movements(agent.mineflayerBot!)
+        agent.mineflayerBot!.pathfinder.setMovements(defaultMove)
         await mbot.pathfinder.goto(new goals.GoalBreakBlock(pos, mbot.world, { reach: 4 }))
         return `"${block.displayName}" at ${pos_str} was broken.`
     }

@@ -1,4 +1,4 @@
-import { Bot } from './src/bot'
+import { Agent } from './src/agent'
 import OpenAI from "openai";
 import { LLMFunctions } from "./src/functions/llm-functions";
 
@@ -10,7 +10,7 @@ const client = new OpenAI({
 await LLMFunctions.registerFunctions('./src/functions/examples');
 
 
-const bot = new Bot({
+const bot = new Agent({
     host: process.env.SERVER_HOST || 'localhost',
     username: process.env.BOT_USERNAME || 'Bot',
     auth: 'offline',

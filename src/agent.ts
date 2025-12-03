@@ -8,7 +8,7 @@ import type { Entity } from 'prismarine-entity';
 import * as collectblockPlugin from 'mineflayer-collectblock'
 import type { LLMFunctionGroup } from './functions/llm-functions';
 
-export class Bot {
+export class Agent {
     public mineflayerBot?: mineflayer.Bot;
     private llm: LLMExtension;
 
@@ -51,7 +51,7 @@ export class Bot {
     }
 
     getBotDataPath() {
-        return `${Bot.BOT_DATA_PATH}/${this.mineflayerBot!.username}`;
+        return `${Agent.BOT_DATA_PATH}/${this.mineflayerBot!.username}`;
     }
 
     async onSpawn() {

@@ -1,7 +1,7 @@
 import fs from 'fs'
 import z from 'zod'
 
-import type { Bot } from "../bot";
+import type { Agent } from "../agent";
 import type { GameMode } from "mineflayer"
 
 /**
@@ -17,7 +17,7 @@ export interface LLMFunctionResult {
 /**
  * LLM function. If result is a string, it is treated as 'message' in LLMFunctionResult with 'stop_calling' set to false.
  */
-type LLMFunctionHandler<T extends z.ZodObject> = (bot: Bot, args: z.infer<T>) => Promise<LLMFunctionResult | string>
+type LLMFunctionHandler<T extends z.ZodObject> = (agent: Agent, args: z.infer<T>) => Promise<LLMFunctionResult | string>
 
 interface LLMFunctionInfo<T extends z.ZodObject> {
     /**
@@ -121,11 +121,11 @@ export class LLMFunctions {
     /**
      * Searches function 'name', checks it's schema against 'args' using zod, and then calls it. 
      * @param name function name
-     * @param bot llm bot context
+     * @param agent llm agent context
      * @param args arguments to pass function
      * @returns error text or function result
      */
-    public static invokeFunction(name: string, bot: Bot, args: { [key: string]: any }) {
+    public static invokeFunction(name: string, agent: Agent, args: { [key: string]: any }) {
         const info = this.llmFunctions.filter((v) => v.name == name)[0];
         if (info == undefined) {
             return `Function '${name}' is not found!`
@@ -138,6 +138,6 @@ export class LLMFunctions {
             return `Invalid arguments: ${error}`;
         }
 
-        return info.handler(bot, args);
+        return info.handler(agent, args);
     }
 }

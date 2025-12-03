@@ -1,4 +1,4 @@
-import type { Bot } from "../../bot"
+import type { Agent } from "../../agent"
 import { LLMFunctions } from "../llm-functions"
 
 import { z } from "zod"
@@ -137,7 +137,7 @@ LLMFunctions.register({
 		schema: z.object({
 				expr: z.string().describe("Math expression. Supports all standart JS math functions. E.g. \"(pow(2,3) + sqrt(16)) / 2\""),
 		}),
-		handler: async (bot: Bot, args) => {
+		handler: async (agent: Agent, args) => {
 				return {
 					message: safeEvalExpression(args.expr)
 				}

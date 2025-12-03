@@ -1,11 +1,11 @@
-import type { Bot } from "../../bot";
+import type { Agent } from "../../agent";
 import { LLMFunctions } from "../llm-functions";
 import { getNearbyEntities } from "./base-bot-functions";
 import type { Entity } from "prismarine-entity";
 
 import z from "zod";
 
-export async function discard(bot: Bot, itemName: string, num = -1) {
+export async function discard(agent: Agent, itemName: string, num = -1) {
     /**
      * Discard the given item.
      * @param {MinecraftBot} bot, reference to the minecraft bot.
@@ -15,7 +15,7 @@ export async function discard(bot: Bot, itemName: string, num = -1) {
      * @example
      * await skills.discard(bot, "oak_log");
      **/
-    const mineflayerBot = bot.mineflayerBot!;
+    const mineflayerBot = agent.mineflayerBot!;
     let discarded = 0;
     while (true) {
         let item = mineflayerBot.inventory.items().find(item => item.name === itemName);
@@ -35,11 +35,11 @@ export async function discard(bot: Bot, itemName: string, num = -1) {
     return `Discarded ${discarded} ${itemName}.`;
 }
 
-export async function giveToPlayer(bot: Bot, itemType: string, entity: Entity, num = 1) {
-    const mineflayerBot = bot.mineflayerBot!;
+export async function giveToPlayer(agent: Agent, itemType: string, entity: Entity, num = 1) {
+    const mineflayerBot = agent.mineflayerBot!;
 
     await mineflayerBot.lookAt(entity.position);
-    if (await discard(bot, itemType, num)) {
+    if (await discard(agent, itemType, num)) {
         return `Given ${itemType} to ${entity.username}.`;
     }
     return `Failed to give ${itemType} to ${entity.username}, it was never received.`;
@@ -73,11 +73,11 @@ LLMFunctions.register({
         entity_id: z.string().describe("The id of the entity to give the item to"),
         num: z.number().describe("The number of items to give")
     }),
-    handler: async (bot: Bot, args) => {
-        let entity = bot.mineflayerBot!.entities[args.entity_id];
+    handler: async (agent: Agent, args) => {
+        let entity = agent.mineflayerBot!.entities[args.entity_id];
         if (!entity) return `Entity with ID ${args.entity_id} is not found!`;
         
-        const res = await giveToPlayer(bot, args.item_type, entity, args.num);
+        const res = await giveToPlayer(agent, args.item_type, entity, args.num);
         console.log(res)
         return {
             message: res,

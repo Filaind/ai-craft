@@ -1,16 +1,16 @@
-import type { Bot } from "../../bot"
+import type { Agent } from "../../agent"
 import { Entity } from "prismarine-entity"
 import { LLMFunctions } from "../llm-functions"
 import { Movements, goals } from "mineflayer-pathfinder";
 import { z } from "zod";
 
-export function getNearbyEntities(bot: Bot, maxDistance = 16) {
+export function getNearbyEntities(agent: Agent, maxDistance = 16) {
     let entity_distances: { entity_id: string, entity: Entity, distance: number }[] = [];
-    for (const [entity_id, entity] of Object.entries(bot.mineflayerBot!.entities)) {
-        if (entity.username == bot.mineflayerBot!.username) continue;
-        const distance = entity.position.distanceTo(bot.mineflayerBot!.entity.position);
+    for (const [entity_id, entity] of Object.entries(agent.mineflayerBot!.entities)) {
+        if (entity.username == agent.mineflayerBot!.username) continue;
+        const distance = entity.position.distanceTo(agent.mineflayerBot!.entity.position);
         if (distance > maxDistance) continue;
-        entity_distances.push({ entity_id, entity: entity, distance: distance });
+        entity_distances.push({ entity_id, entity: entity as Entity, distance: distance });
     }
     entity_distances.sort((a, b) => a.distance - b.distance);
     return entity_distances;
@@ -25,9 +25,9 @@ LLMFunctions.register({
         y: z.number(),
         z: z.number()
     }),
-    handler: async (bot: Bot, args) => {
-        let mbot = bot.mineflayerBot!;
-        const defaultMove = new Movements(bot.mineflayerBot!)
+    handler: async (agent: Agent, args) => {
+        let mbot = agent.mineflayerBot!;
+        const defaultMove = new Movements(agent.mineflayerBot!)
         mbot.pathfinder.setMovements(defaultMove)
         
         let goal = new goals.GoalNear(args.x, args.y, args.z, 1);
@@ -43,13 +43,13 @@ LLMFunctions.register({
     schema: z.object({
         entity_id: z.string().describe("Id of the entity to walk to"),
     }),
-    handler: async (bot: Bot, args) => {
-        let mbot = bot.mineflayerBot!;
+    handler: async (agent: Agent, args) => {
+        let mbot = agent.mineflayerBot!;
 
         let entity = mbot.entities[args.entity_id];
         if (!entity) return `Entity with ID ${args.entity_id} is not found!`;
 
-        const defaultMove = new Movements(bot.mineflayerBot!)
+        const defaultMove = new Movements(agent.mineflayerBot!)
         mbot.pathfinder.setMovements(defaultMove)
 
         let pos = entity.position;
@@ -66,11 +66,11 @@ LLMFunctions.register({
     schema: z.object({
         entity_id: z.string().describe("The id of the entity to attack")
     }),
-    handler: async (bot: Bot, args) => {
-        let entity = bot.mineflayerBot!.entities[args.entity_id];
+    handler: async (agent: Agent, args) => {
+        let entity = agent.mineflayerBot!.entities[args.entity_id];
         if (!entity) return `Entity with ID ${args.entity_id} is not found!`
 
-        bot.mineflayerBot!.pvp.attack(entity)
+        agent.mineflayerBot!.pvp.attack(entity)
         return {
             message: `Attacking entity ${args.entity_id}`,
             stop_calling: true
@@ -85,9 +85,9 @@ LLMFunctions.register({
     schema: z.object({
         max_distance: z.number().describe("The maximum distance to search for entities. Use 1000 for unlimited distance.")
     }),
-    handler: async (bot: Bot, args) => {
+    handler: async (agent: Agent, args) => {
         return {
-            message: getNearbyEntities(bot, args.max_distance).map(({entity_id, entity, distance}) => ({
+            message: getNearbyEntities(agent, args.max_distance).map(({entity_id, entity, distance}) => ({
                 distance,
                 entity_id,
                 name: entity.name,
@@ -104,8 +104,8 @@ LLMFunctions.register({
     schema: z.object({
         todo_list: z.string().describe("Write detailed description of the todo list. Use markdown format")
     }),
-    handler: async (bot: Bot, args) => {
-        bot.todoList = args.todo_list
+    handler: async (agent: Agent, args) => {
+        agent.todoList = args.todo_list
 
         return {
             message: "Todo list set"

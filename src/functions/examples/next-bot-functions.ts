@@ -1,4 +1,4 @@
-import type { Bot } from "../../bot";
+import type { Agent } from "../../agent";
 import { Movements } from "mineflayer-pathfinder";
 import type { Block } from "prismarine-block";
 import { LLMFunctions } from "../llm-functions";
@@ -9,12 +9,12 @@ import { Vec3 } from 'vec3';
 
 import z from "zod";
 
-export function getNearestBlocksWhere(bot: Bot, predicate: (block: Block) => boolean, distance = 8, count = 10000) {
-    const mineflayerBot = bot.mineflayerBot!;
+export function getNearestBlocksWhere(agent: Agent, predicate: (block: Block) => boolean, distance = 8, count = 10000) {
+    const mineflayerBot = agent.mineflayerBot!;
 
     /**
      * Get a list of the nearest blocks that satisfy the given predicate.
-     * @param {Bot} bot - The bot to get the nearest blocks for.
+     * @param {Agent} bot - The bot to get the nearest blocks for.
      * @param {function} predicate - The predicate to filter the blocks.
      * @param {number} distance - The maximum distance to search, default 16.
      * @param {number} count - The maximum number of blocks to find, default 10000.
@@ -27,8 +27,8 @@ export function getNearestBlocksWhere(bot: Bot, predicate: (block: Block) => boo
     return blocks;
 }
 
-export async function collectBlock(bot: Bot, blockType: string, num = 1, exclude: Position[] | null = null) {
-    const mineflayerBot = bot.mineflayerBot!;
+export async function collectBlock(agent: Agent, blockType: string, num = 1, exclude: Position[] | null = null) {
+    const mineflayerBot = agent.mineflayerBot!;
     /**
      * Collect one of the given block type.
      * @param {MinecraftBot} bot, reference to the minecraft bot.
@@ -55,7 +55,7 @@ export async function collectBlock(bot: Bot, blockType: string, num = 1, exclude
 
     let collected = 0;
 
-    const movements = new Movements(bot.mineflayerBot!);
+    const movements = new Movements(agent.mineflayerBot!);
     movements.dontMineUnderFallingBlock = false;
     movements.dontCreateFlow = true;
 
@@ -63,7 +63,7 @@ export async function collectBlock(bot: Bot, blockType: string, num = 1, exclude
     const unsafeBlocks = ['obsidian'];
 
     for (let i = 0; i < num; i++) {
-        let blocks = getNearestBlocksWhere(bot, block => {
+        let blocks = getNearestBlocksWhere(agent, block => {
             if (!blocktypes.includes(block.name)) {
                 return false;
             }
@@ -109,8 +109,8 @@ LLMFunctions.register({
         block_type: z.string().describe("The type of the block to collect, for example 'oak_log', 'coal_ore', 'diamond_ore', 'emerald_ore', 'iron_ore', 'gold_ore', 'lapis_lazuli_ore', 'redstone_ore', 'dirt', 'cobblestone', 'stone', 'grass_block', 'water', 'lava', 'obsidian' etc."),
         num: z.number().describe("The number of blocks to collect")
     }),
-    handler: async (bot: Bot, args) => {
-        const res = await collectBlock(bot, args.block_type, args.num);
+    handler: async (agent: Agent, args) => {
+        const res = await collectBlock(agent, args.block_type, args.num);
         return "Collected " + args.block_type + " blocks";
     }
 })
@@ -130,10 +130,10 @@ LLMFunctions.register({
             ])
         ).max(50).describe("List of blocks as [x,y,z,type]")
     }),
-    handler: async (bot: Bot, args) => {
+    handler: async (agent: Agent, args) => {
         for (const [x, y, z, block_type] of args.blocks) {
             const setblockCommand = `/setblock ${x} ${y} ${z} ${block_type}`;
-            bot.mineflayerBot!.chat(setblockCommand);
+            agent.mineflayerBot!.chat(setblockCommand);
         }
 
         return "Blocks placed";
@@ -170,10 +170,10 @@ LLMFunctions.register({
     schema: z.object({
         code: z.string().describe(exampleCode)
     }),
-    handler: async (bot: Bot, args) => {
+    handler: async (agent: Agent, args) => {
         console.log("Executing code: " + args.code);
 
-        const mineflayerBot = bot.mineflayerBot;
+        const mineflayerBot = agent.mineflayerBot;
 
         const func = makeCompartment({
             require,

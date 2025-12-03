@@ -1,8 +1,8 @@
 import OpenAI from "openai";
 import { type LLMFunctionResult, LLMFunctions } from "../functions/llm-functions";
 import type { ChatCompletionMessageParam } from "openai/resources";
-import { BaseBotExtension } from "./base-bot-extension";
-import type { Bot } from "../bot";
+import { BaseAgentExtension } from "./base-agent-extension";
+import type { Agent } from "../agent";
 import type { GameMode } from "mineflayer"
 import fs from 'fs';
 
@@ -23,7 +23,7 @@ For task execution, use the TODO LIST. Break tasks into subtasks and execute the
 Modify the TODO LIST through the set_todo_list function.
 `;
 
-export class LLMExtension extends BaseBotExtension {
+export class LLMExtension extends BaseAgentExtension {
     private client: OpenAI;
     private messages: ChatMessage[] = [];
     private functionCallHistory: string[] = [];
@@ -38,8 +38,8 @@ export class LLMExtension extends BaseBotExtension {
 
     public systemMessage: string = defaultSystemMessage;
 
-    constructor(bot: Bot, client: OpenAI) {
-        super(bot);
+    constructor(agent: Agent, client: OpenAI) {
+        super(agent);
         this.client = client;
 
         this.messages.push({
@@ -62,17 +62,17 @@ export class LLMExtension extends BaseBotExtension {
 
 
     loadMemory() {
-        if (fs.existsSync(`${this.bot.getBotDataPath()}/memory.json`)) {
-            this.messages = JSON.parse(fs.readFileSync(`${this.bot.getBotDataPath()}/memory.json`, 'utf8'));
+        if (fs.existsSync(`${this.agent.getBotDataPath()}/memory.json`)) {
+            this.messages = JSON.parse(fs.readFileSync(`${this.agent.getBotDataPath()}/memory.json`, 'utf8'));
         }
     }
 
     saveMemory() {
-        fs.writeFileSync(`${this.bot.getBotDataPath()}/memory.json`, JSON.stringify(this.messages, null, 2));
+        fs.writeFileSync(`${this.agent.getBotDataPath()}/memory.json`, JSON.stringify(this.messages, null, 2));
     }
 
     saveTools() {
-        fs.writeFileSync(`${this.bot.getBotDataPath()}/tools.json`, JSON.stringify(this.gameModeTools, null, 2));
+        fs.writeFileSync(`${this.agent.getBotDataPath()}/tools.json`, JSON.stringify(this.gameModeTools, null, 2));
     }
 
     //Удаляем из памяти сообщения о функциях get nearby entities. Иначе он будет старые сообщения о позициях объектов юзать.
@@ -92,7 +92,7 @@ export class LLMExtension extends BaseBotExtension {
             })
         }
 
-        const inventory = this.bot.mineflayerBot!.inventory.items().map((item) => {
+        const inventory = this.agent.mineflayerBot!.inventory.items().map((item) => {
             return {
                 name: item.name,
                 count: item.count,
@@ -104,7 +104,7 @@ export class LLMExtension extends BaseBotExtension {
         try {
 
 
-            let tools = this.gameModeTools[this.bot.mineflayerBot?.player.gamemode as unknown as GameMode]
+            let tools = this.gameModeTools[this.agent.mineflayerBot?.player.gamemode as unknown as GameMode]
             tools = tools.concat(this.gameModeTools["any"])
 
             const response = await this.client.chat.completions.create({
@@ -115,8 +115,8 @@ export class LLMExtension extends BaseBotExtension {
                     {
                         role: "user",
                         content: `Your inventory: ${JSON.stringify(inventory)}
-                        Your position: ${this.bot.mineflayerBot!.entity.position}
-                        Your todo list: ${this.bot.todoList}
+                        Your position: ${this.agent.mineflayerBot!.entity.position}
+                        Your todo list: ${this.agent.todoList}
                         `
                     },
                     ...this.messages
@@ -157,7 +157,7 @@ export class LLMExtension extends BaseBotExtension {
 
                         // this.bot.mineflayerBot!.chat("Calling function: " + function_name + " with arguments: " + tool_call.function.arguments)
 
-                        const ret = await LLMFunctions.invokeFunction(function_name, this.bot, function_arguments)
+                        const ret = await LLMFunctions.invokeFunction(function_name, this.agent, function_arguments)
                         const result: LLMFunctionResult = (typeof(ret) == "string") ? { message: ret } : ret;
 
                         this.messages.push({
