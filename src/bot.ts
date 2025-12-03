@@ -6,6 +6,7 @@ import OpenAI from 'openai';
 import fs from 'fs';
 import type { Entity } from 'prismarine-entity';
 import * as collectblockPlugin from 'mineflayer-collectblock'
+import type { LLMFunctionGroup } from './functions/llm-functions';
 
 export class Bot {
     public mineflayerBot?: mineflayer.Bot;
@@ -17,14 +18,12 @@ export class Bot {
 
     public todoList: string = ""
 
-
     constructor(options: BotOptions, llmClient: OpenAI) {
         this.llm = new LLMExtension(this, llmClient);
         this.start(options)
     }
 
     async start(options: BotOptions) {
-
         this.mineflayerBot = mineflayer.createBot({
             ...options,
         })
@@ -44,6 +43,10 @@ export class Bot {
         
         //@ts-ignore
         this.mineflayerBot.on('stoppedAttacking', this.onStoppedAttacking.bind(this))
+    }
+
+    hasGroup(group: LLMFunctionGroup) {
+        return this.llm.functionGroups.has(group);
     }
 
     sendChatMessage(message: string) {
@@ -68,7 +71,6 @@ export class Bot {
         
         this.lastGameMode = this.mineflayerBot!.game.gameMode;
         this.llm.setGamemode(this.lastGameMode);
-
 
         console.log("Bot spawned", this.mineflayerBot!.username);
         const entity = this.mineflayerBot!.nearestEntity()

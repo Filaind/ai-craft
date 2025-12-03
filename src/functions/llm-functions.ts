@@ -127,7 +127,12 @@ export class LLMFunctions {
     public static invokeFunction(name: string, bot: Bot, args: { [key: string]: any }) {
         const info = this.llmFunctions.filter((v) => v.name == name)[0];
         if (info == undefined) {
-            return `Function '${name}' not found!`
+            return `Function '${name}' is not found!`
+        }
+
+        // Check 'permissions'
+        if (info.group && !bot.hasGroup(info.group)) {
+            return `Access to function '${name}' is denied!`;
         }
 
         // Validate arguments against the function's schema

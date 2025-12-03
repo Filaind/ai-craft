@@ -41,7 +41,10 @@ export class LLMExtension extends BaseBotExtension {
         })
 
         //this.loadMemory();
+    }
 
+    get functionGroups() {
+        return this.toolsCache.groups;
     }
 
     setGamemode(gameMode: GameMode) {
@@ -193,7 +196,5 @@ export class LLMExtension extends BaseBotExtension {
             console.error('Error in LLM request', JSON.stringify(error, null, 2))
             return 'Error in LLM request'
         }
-
-
     }
 }
