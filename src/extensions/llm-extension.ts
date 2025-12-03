@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { type LLMFunctionResult, type LLMFunctionGroup, LLMFunctions, LLMFunctionsCache } from "../functions/llm-functions";
+import { type LLMFunctionResult, LLMFunctions } from "../functions/llm-functions";
 import type { ChatCompletionMessageParam } from "openai/resources";
 import { BaseBotExtension } from "./base-bot-extension";
 import type { Bot } from "../bot";
@@ -27,7 +27,13 @@ export class LLMExtension extends BaseBotExtension {
     private client: OpenAI;
     private messages: ChatMessage[] = [];
     private functionCallHistory: string[] = [];
-    private toolsCache: LLMFunctionsCache = new LLMFunctionsCache();
+
+    private gameModeTools: Record<GameMode, any[]> = {
+        "survival": [],
+        "creative": [],
+        "adventure": [],
+        "spectator": []
+    }
 
     public systemMessage: string = defaultSystemMessage;
 
@@ -40,24 +46,16 @@ export class LLMExtension extends BaseBotExtension {
             content: this.systemMessage
         })
 
+        const allTools = LLMFunctions.getOpenAiTools();
+        allTools.forEach((tool) => {
+            if(tool.gameMode) {
+                this.gameModeTools[tool.gameMode].push(tool);
+            }
+        });
+
         //this.loadMemory();
     }
 
-    get functionGroups() {
-        return this.toolsCache.groups;
-    }
-
-    setGamemode(gameMode: GameMode) {
-        const GAMEMODES: GameMode[] = ["survival", "creative", "adventure", "spectator"];
-        let groups = this.toolsCache.groups;
-        GAMEMODES.forEach((v) => groups.delete(v));
-        groups.add(gameMode);
-        this.toolsCache.groups = groups;
-
-        this.saveTools();
-
-        console.log(`Gamemode changed to ${gameMode}`);
-    }
 
     loadMemory() {
         if (fs.existsSync(`${this.bot.getBotDataPath()}/memory.json`)) {
@@ -70,7 +68,7 @@ export class LLMExtension extends BaseBotExtension {
     }
 
     saveTools() {
-        fs.writeFileSync(`${this.bot.getBotDataPath()}/tools.json`, JSON.stringify(this.toolsCache.tools, null, 2));
+        fs.writeFileSync(`${this.bot.getBotDataPath()}/tools.json`, JSON.stringify(this.gameModeTools, null, 2));
     }
 
     //Удаляем из памяти сообщения о функциях get nearby entities. Иначе он будет старые сообщения о позициях объектов юзать.
@@ -100,10 +98,14 @@ export class LLMExtension extends BaseBotExtension {
 
         console.log('LLM request');
         try {
+
+
+            const tools = this.gameModeTools[this.bot.mineflayerBot?.player.gamemode as unknown as GameMode]
+
             const response = await this.client.chat.completions.create({
                 model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
                 tool_choice: "auto",
-                tools: this.toolsCache.tools as any,
+                tools: tools,
                 messages: [
                     {
                         role: "user",

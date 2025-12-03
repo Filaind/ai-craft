@@ -7,7 +7,7 @@ import type { GameMode } from "mineflayer"
 /**
  * LLM Function groups. Used to limit the tools available for LLM to call.
  */
-export type LLMFunctionGroup = "mining" | "fighting" | "unsafe" | GameMode
+export type LLMFunctionGroup = "mining" | "fighting" | "unsafe"
 
 export interface LLMFunctionResult {
     message: any
@@ -24,6 +24,10 @@ interface LLMFunctionInfo<T extends z.ZodObject> {
      * Group to which this function is assigned to.
      */
     group?: LLMFunctionGroup;
+    /**
+     * If true, the function is only available in the given game mode.
+     */
+    gameMode?: GameMode;
 
     /**
      * The name of the function to call.
@@ -34,7 +38,7 @@ interface LLMFunctionInfo<T extends z.ZodObject> {
      * A description of the function. Used by the model to determine whether or not to
      * call the function.
      */
-    description?: string | null;
+    description?: string | undefined;
 
     /**
      * A JSON schema object describing the parameters of the function.
@@ -90,21 +94,18 @@ export class LLMFunctions {
     }
 
     /**
-     * Returns tool list in Ollama/LM Studio format
+     * Returns tool list in OpenAI format
      * @param groups - list of function groups to include in tools
      * @returns list to pass into 'tools'
      */
-    public static getTools(groups: Set<LLMFunctionGroup>): object[] {
+    public static getOpenAiTools(): { name: string, group?: LLMFunctionGroup, gameMode?: GameMode, description?: string, parameters: object }[] {
         // getting functions that have no group, or it's group is listed in "groups"
-        let filtered = this.llmFunctions.filter((v) => (v.group == undefined || groups.has(v.group)))
-        // converting to Ollama schema
-        return filtered.map(({ name, description, schema }) => ({
-            type: "function",
-            function: {
-                name,
-                description,
-                parameters: this.toJSONSchema(schema)
-            }
+        return this.llmFunctions.map(({ name, description, schema, group, gameMode }) => ({
+            name: name,
+            group: group,
+            gameMode: gameMode,
+            description: description,
+            parameters: this.toJSONSchema(schema)
         }));
     }
 
@@ -130,11 +131,6 @@ export class LLMFunctions {
             return `Function '${name}' is not found!`
         }
 
-        // Check 'permissions'
-        if (info.group && !bot.hasGroup(info.group)) {
-            return `Access to function '${name}' is denied!`;
-        }
-
         // Validate arguments against the function's schema
         try {
             info.schema.parse(args);
@@ -143,45 +139,5 @@ export class LLMFunctions {
         }
 
         return info.handler(bot, args);
-    }
-}
-
-/**
- * This class is used by Bot just to avoid tool conversion to Ollama format each time generation is requested
- */
-export class LLMFunctionsCache {
-    private activeGroups: Set<LLMFunctionGroup>;
-    private cachedTools: object[];
-
-    constructor(groups: Set<LLMFunctionGroup> = new Set()) {
-        this.activeGroups = groups;
-        this.cachedTools = LLMFunctions.getTools(groups);
-    }
-
-    updateTools() {
-        this.cachedTools = LLMFunctions.getTools(this.activeGroups);
-    }
-
-    add(group: LLMFunctionGroup) {
-        this.activeGroups.add(group)
-        this.updateTools();
-    }
-
-    delete(group: LLMFunctionGroup) {
-        this.activeGroups.delete(group)
-        this.updateTools();
-    }
-
-    get groups() {
-        return this.activeGroups;
-    }
-
-    set groups(new_groups: Set<LLMFunctionGroup>) {
-        this.activeGroups = new_groups;
-        this.updateTools();
-    }
-
-    get tools() {
-        return this.cachedTools;
     }
 }

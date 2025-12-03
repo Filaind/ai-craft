@@ -45,10 +45,6 @@ export class Bot {
         this.mineflayerBot.on('stoppedAttacking', this.onStoppedAttacking.bind(this))
     }
 
-    hasGroup(group: LLMFunctionGroup) {
-        return this.llm.functionGroups.has(group);
-    }
-
     sendChatMessage(message: string) {
         const sanitized = message.replace(/[^a-zA-Zа-яА-Я0-9 .,!?-_:;'"()]/g, '').trim();
         this.mineflayerBot!.chat("%" + sanitized);
@@ -58,19 +54,10 @@ export class Bot {
         return `${Bot.BOT_DATA_PATH}/${this.mineflayerBot!.username}`;
     }
 
-    async onGameStateChanged() {
-        let gameMode = this.mineflayerBot!.game.gameMode;
-        if (gameMode != this.lastGameMode) {
-            this.lastGameMode = gameMode;
-            this.llm.setGamemode(gameMode);
-        }
-    }
-
     async onSpawn() {
         fs.mkdirSync(this.getBotDataPath(), { recursive: true });
         
         this.lastGameMode = this.mineflayerBot!.game.gameMode;
-        this.llm.setGamemode(this.lastGameMode);
 
         console.log("Bot spawned", this.mineflayerBot!.username);
         const entity = this.mineflayerBot!.nearestEntity()
