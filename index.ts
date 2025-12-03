@@ -1,6 +1,25 @@
 import { Agent } from './src/agent'
 import OpenAI from "openai";
 import { LLMFunctions } from "./src/functions/llm-functions";
+import pino from 'pino';
+
+export const logger = pino({
+    transport: {
+        target: 'pino-pretty',
+        options: {
+            colorize: true,
+            translateTime: 'HH:mm:ss',
+            ignore: 'pid,hostname',
+        },
+    },
+    level: 'debug',
+});
+
+console.log = logger.info.bind(logger);
+console.error = logger.error.bind(logger);
+console.warn = logger.warn.bind(logger);
+console.debug = logger.debug.bind(logger);
+console.info = logger.info.bind(logger);
 
 const client = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY || "",
