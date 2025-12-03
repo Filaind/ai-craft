@@ -112,7 +112,7 @@ export class LLMExtension extends BaseAgentExtension {
             }
         })
 
-        console.log('LLM request');
+        console.time('LLM request');
         try {
             let tools = this.gameModeTools[this.agent.mineflayerBot!.game.gameMode]
             tools = tools.filter((t) => this.canCall(t.group)).map((t) => ({
@@ -135,6 +135,8 @@ export class LLMExtension extends BaseAgentExtension {
                     ...this.messages
                 ],
             });
+            console.timeEnd('LLM request');
+
             const choice = response.choices[0]!
 
             //Если есть tool calls, то вызываем функции
@@ -200,6 +202,21 @@ export class LLMExtension extends BaseAgentExtension {
                 return this.getResponse()
             }
             else {
+
+                //Модель обосралась на вызовы функций, иногда возвращает reasoning вместо content
+                //choice.message.reasoning - не существует в openai
+                //@ts-ignore
+                if(choice.message.role == "assistant" && choice.message.content == null) {
+                    this.messages.push({
+                        role: "assistant",
+                        //@ts-ignore
+                        content: choice.message.reasoning!
+                    })
+                    //Повторяем запрос, чтобы модель могла пофиксила свою ошибку
+                    return this.getResponse()
+                }
+
+
                 this.messages.push({
                     role: "assistant",
                     content: choice.message.content!
