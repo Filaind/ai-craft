@@ -117,7 +117,6 @@ LLMFunctions.register({
 
 LLMFunctions.register({
     gameMode: "creative",
-    group: "unsafe",
     name: "place_block",
     description: "Place batch of blocks of the given type.",
     schema: z.object({

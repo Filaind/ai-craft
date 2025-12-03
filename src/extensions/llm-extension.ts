@@ -112,13 +112,16 @@ export class LLMExtension extends BaseAgentExtension {
             }
         })
 
-        console.time('LLM request');
+        console.log('LLM request start');
+        const startTime = Date.now();
         try {
             let tools = this.gameModeTools[this.agent.mineflayerBot!.game.gameMode]
             tools = tools.filter((t) => this.canCall(t.group)).map((t) => ({
                 type: "function",
                 function: t.function
             }));
+
+            console.log('LLM Tools in request: ', tools.map((t) => t.function.name));
             
             const response = await this.client.chat.completions.create({
                 model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
@@ -135,7 +138,7 @@ export class LLMExtension extends BaseAgentExtension {
                     ...this.messages
                 ],
             });
-            console.timeEnd('LLM request');
+            console.log('LLM request end. Time taken:', Date.now() - startTime, 'ms');
 
             const choice = response.choices[0]!
 
@@ -226,7 +229,7 @@ export class LLMExtension extends BaseAgentExtension {
                 this.saveMemory();
 
                 //Если нет tool calls, то возвращаем ответ
-                console.log("LLM finish response: ", choice.message.content!)
+                console.log("LLM finish response:", choice.message.content!)
                 return choice.message.content!
             }
 
