@@ -10,22 +10,18 @@ LLMFunctions.register({
     schema: z.object({}),
     handler: async (bot: Bot, args) => {
         let level = bot.mineflayerBot!.food;
-        return {
-            message: `Food saturation is at ${level * 5}%`
-        }
+        return `Food saturation is at ${level} (${level * 5}%)`;
     }
 })
 
 LLMFunctions.register({
     group: "survival",
     name: "get_health_level",
-    description: "Returns level of player's hunger",
+    description: "Returns level of player's health",
     schema: z.object({}),
     handler: async (bot: Bot, args) => {
         let level = bot.mineflayerBot!.health;
-        return {
-            message: `Health is at ${level * 5}%`
-        }
+        return `Health is at ${level} (${level * 5}%)`;
     }
 })
 
