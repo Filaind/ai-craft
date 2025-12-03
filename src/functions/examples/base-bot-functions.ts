@@ -18,30 +18,20 @@ export function getNearbyEntities(bot: Bot, maxDistance = 16) {
 
 LLMFunctions.register({
     name: "walk_to_position",
-    description: "Walk to specific absolute coordinates",
+    description: "Walk to specified coordinates",
     schema: z.object({
         x: z.number(),
         y: z.number(),
         z: z.number()
     }),
     handler: async (bot: Bot, args) => {
-        const promise = new Promise((resolve, reject) => {
-            bot.mineflayerBot!.once('goal_reached', () => {
-                console.log("Goal reached")
-                resolve(true)
-            })
-
-
-            const defaultMove = new Movements(bot.mineflayerBot!)
-            bot.mineflayerBot!.pathfinder.setMovements(defaultMove)
-            bot.mineflayerBot!.pathfinder.setGoal(new goals.GoalNear(args.x, args.y, args.z, 2))
-        })
-
-        await promise
-
-        return {
-            message: "Goal reached",
-        }
+        let mbot = bot.mineflayerBot!;
+        const defaultMove = new Movements(bot.mineflayerBot!)
+        mbot.pathfinder.setMovements(defaultMove)
+        
+        let goal = new goals.GoalNear(args.x, args.y, args.z, 1);
+        await mbot.pathfinder.goto(goal);
+        return `Reached to (${args.x}, ${args.y}, ${args.z})`;
     }
 })
 
@@ -52,28 +42,18 @@ LLMFunctions.register({
         entity_id: z.string().describe("Id of the entity to walk to"),
     }),
     handler: async (bot: Bot, args) => {
-        const promise = new Promise((resolve, reject) => {
-            bot.mineflayerBot!.once('goal_reached', () => {
-                console.log("Goal reached")
-                resolve(true)
-            })
+        let mbot = bot.mineflayerBot!;
 
-            let entitiy = bot.mineflayerBot!.entities[args.entity_id];
-            if (!entitiy) {
-                return `Entity with id ${args.entity_id} not found!`;
-            }
-            let pos = entitiy.position;
+        let entity = mbot.entities[args.entity_id];
+        if (!entity) return `Entity with ID ${args.entity_id} is not found!`;
 
-            const defaultMove = new Movements(bot.mineflayerBot!)
-            bot.mineflayerBot!.pathfinder.setMovements(defaultMove)
-            bot.mineflayerBot!.pathfinder.setGoal(new goals.GoalNear(pos.x, pos.y, pos.z, 2))
-        })
+        const defaultMove = new Movements(bot.mineflayerBot!)
+        mbot.pathfinder.setMovements(defaultMove)
 
-        await promise
-
-        return {
-            message: "Goal reached",
-        }
+        let pos = entity.position;
+        let goal = new goals.GoalNear(pos.x, pos.y, pos.z, 2);
+        await mbot.pathfinder.goto(goal);
+        return `Reached to ${args.entity_id} at (${pos.x}, ${pos.y}, ${pos.z})`;
     }
 })
 
@@ -85,9 +65,8 @@ LLMFunctions.register({
     }),
     handler: async (bot: Bot, args) => {
         let entity = bot.mineflayerBot!.entities[args.entity_id];
-        if (!entity) {
-            return `Entity with id ${args.entity_id} is not found!`
-        }
+        if (!entity) return `Entity with ID ${args.entity_id} is not found!`
+
         bot.mineflayerBot!.pvp.attack(entity)
         return {
             message: `Attacking entity ${args.entity_id}`,

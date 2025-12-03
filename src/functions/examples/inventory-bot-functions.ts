@@ -69,16 +69,14 @@ LLMFunctions.register({
     description: "Give an item to an player or entity",
     schema: z.object({
         item_type: z.string().describe("The type of the item to give"),
-        entity_id: z.number().describe("The id of the entity to give the item to"),
+        entity_id: z.string().describe("The id of the entity to give the item to"),
         num: z.number().describe("The number of items to give")
     }),
     handler: async (bot: Bot, args) => {
-        let entities = getNearbyEntities(bot, 1000)
-        entities = entities.filter((entity) => entity.entity!.id === args.entity_id)
-        if (entities.length === 0) {
-            return "Entity not found"
-        }
-        const res = await giveToPlayer(bot, args.item_type, entities[0]!.entity, args.num);
+        let entity = bot.mineflayerBot!.entities[args.entity_id];
+        if (!entity) return `Entity with ID ${args.entity_id} is not found!`;
+        
+        const res = await giveToPlayer(bot, args.item_type, entity, args.num);
         console.log(res)
         return {
             message: res,

@@ -67,6 +67,27 @@ export class LLMFunctions {
         }
     }
 
+    private static toJSONSchema(schema: z.ZodObject) {
+        let json = z.toJSONSchema(schema, { target: "openapi-3.0" })
+        if (json) {
+            // trim schema to save some tokens
+            delete json["$schema"];
+            let properties = json["properties"];
+            if (properties) {
+                for (let value of (Object.values(properties) as any[])) {
+                    if (value["type"] == "integer") {
+                        if (value["minimum"] <= -9007199254740991) {
+                            delete value["minimum"]
+                        }
+                        if (value["maximum"] >= 9007199254740991) {
+                            delete value["maximum"]
+                        }
+                    }
+                }
+            }
+        }
+        return json;
+    }
 
     /**
      * Returns tool list in Ollama/LM Studio format
@@ -82,7 +103,7 @@ export class LLMFunctions {
             function: {
                 name,
                 description,
-                parameters: z.toJSONSchema(schema, { target: "openapi-3.0" })
+                parameters: this.toJSONSchema(schema)
             }
         }));
     }
