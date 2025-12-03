@@ -35,29 +35,37 @@ LLMFunctions.register({
 
 LLMFunctions.register({
     gameMode: "creative",
-    name: "break_block_at_position",
-    description: "Instantaneously break block at specified coordinates. Make sure you can reach it with your hand.",
+    name: "break_blocks_at_position",
+    description: "Instantaneously break blocks at specified coordinates",
     schema: z.object({
-        x: z.int(),
-        y: z.int(),
-        z: z.int(),
+        blocks: z.array(
+            z.tuple([
+                z.int().describe("x"),
+                z.int().describe("y"), 
+                z.int().describe("z"),
+            ])
+        ).describe("List of block coordinates to break").min(1).max(64)
     }),
     handler: async (agent: Agent, args) => {
         const mbot = agent.mineflayerBot!;
-        const pos = new Vec3(args.x, args.y, args.z);
-        const pos_str = `(${pos.x}, ${pos.y}, ${pos.z})`;
-
-        let block = mbot.blockAt(pos);
-        if (!block) return `There is no block at ${pos_str}`;
-        let distance = mbot.entity?.position.distanceTo(pos);
-        if (distance > 4) return `Block is too far! Distance: ${distance}`;
-
-        const goal = new goals.GoalExact(new Vec3(pos.x, pos.y, pos.z));
-        
-        await agent.mineflayerBot!.ashfinder.goto(goal);
-
-
-        return `"${block.displayName}" at ${pos_str} was broken.`
+        if (args.blocks.length == 0) {
+            return "No block coordinates specified!";
+        }
+        let dug = 0;
+        for (let pos of args.blocks) {
+            const vec = new Vec3(pos[0], pos[1], pos[2]);
+            let block = mbot.blockAt(vec);
+            if (!block || block.name == "air") continue;
+    
+            const goal = new goals.GoalNear(vec, 2);
+            await mbot.ashfinder.goto(goal);
+            await mbot.dig(block, true);
+            dug++;
+        }
+        if (dug == 0) {
+            return "No blocks were broken. All air?"
+        }
+        return `${dug} blocks were broken`;
     }
 })
 
