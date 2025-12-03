@@ -65,7 +65,6 @@ export async function giveToPlayer(agent: Agent, itemType: string, entity: Entit
 // })
 
 LLMFunctions.register({
-    gameMode: "any",
     name: "give_item_to_entity",
     description: "Give an item to an player or entity",
     schema: z.object({

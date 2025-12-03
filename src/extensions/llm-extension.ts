@@ -28,12 +28,11 @@ export class LLMExtension extends BaseAgentExtension {
     private messages: ChatMessage[] = [];
     private functionCallHistory: string[] = [];
 
-    private gameModeTools: Record<GameMode | "any", any[]> = {
+    private gameModeTools: Record<GameMode, any[]> = {
         "survival": [],
         "creative": [],
         "adventure": [],
-        "spectator": [],
-        "any": []
+        "spectator": []
     }
 
     public systemMessage: string = defaultSystemMessage;
@@ -49,13 +48,22 @@ export class LLMExtension extends BaseAgentExtension {
 
         const allTools = LLMFunctions.getOpenAiTools();
         allTools.forEach((tool) => {
-            if(tool.gameMode) {
-                this.gameModeTools[tool.gameMode].push(tool);
+            const actual_tool = {
+                type: "function",
+                function: {
+                    ...tool
+                }
             }
-            else {
-                this.gameModeTools["any"].push(tool);
+            if(tool.gameMode) {
+                this.gameModeTools[tool.gameMode].push(actual_tool);
+            } else {
+                for (let value of Object.values(this.gameModeTools)) {
+                    value.push(actual_tool);
+                }
             }
         });
+
+        //this.saveTools();
 
         //this.loadMemory();
     }
@@ -102,10 +110,7 @@ export class LLMExtension extends BaseAgentExtension {
 
         console.log('LLM request');
         try {
-
-
-            let tools = this.gameModeTools[this.agent.mineflayerBot?.game.gameMode || "any"]
-            tools = tools.concat(this.gameModeTools["any"])
+            let tools = this.gameModeTools[this.agent.mineflayerBot!.game.gameMode]
 
             const response = await this.client.chat.completions.create({
                 model: process.env.LLM_MODEL || "openai/gpt-oss-20b",

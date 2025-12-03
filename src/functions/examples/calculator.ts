@@ -130,7 +130,6 @@ export function safeEvalExpression(expr: string): EvalResult | string {
 }
 
 LLMFunctions.register({
-    gameMode: "any",
 		group: "unsafe", // safe, but unsafe
 		name: "eval",
 		description: "Evaluates math expression. Use it when you need to calculate some numeric value.",
