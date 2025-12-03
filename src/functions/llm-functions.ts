@@ -27,7 +27,7 @@ interface LLMFunctionInfo<T extends z.ZodObject> {
     /**
      * If true, the function is only available in the given game mode.
      */
-    gameMode?: GameMode;
+    gameMode?: GameMode | "any";
 
     /**
      * The name of the function to call.
@@ -98,7 +98,7 @@ export class LLMFunctions {
      * @param groups - list of function groups to include in tools
      * @returns list to pass into 'tools'
      */
-    public static getOpenAiTools(): { name: string, group?: LLMFunctionGroup, gameMode?: GameMode, description?: string, parameters: object }[] {
+    public static getOpenAiTools(): { name: string, group?: LLMFunctionGroup, gameMode?: GameMode | "any", description?: string, parameters: object }[] {
         // getting functions that have no group, or it's group is listed in "groups"
         return this.llmFunctions.map(({ name, description, schema, group, gameMode }) => ({
             name: name,

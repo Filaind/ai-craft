@@ -28,11 +28,12 @@ export class LLMExtension extends BaseBotExtension {
     private messages: ChatMessage[] = [];
     private functionCallHistory: string[] = [];
 
-    private gameModeTools: Record<GameMode, any[]> = {
+    private gameModeTools: Record<GameMode | "any", any[]> = {
         "survival": [],
         "creative": [],
         "adventure": [],
-        "spectator": []
+        "spectator": [],
+        "any": []
     }
 
     public systemMessage: string = defaultSystemMessage;
@@ -50,6 +51,9 @@ export class LLMExtension extends BaseBotExtension {
         allTools.forEach((tool) => {
             if(tool.gameMode) {
                 this.gameModeTools[tool.gameMode].push(tool);
+            }
+            else {
+                this.gameModeTools["any"].push(tool);
             }
         });
 
@@ -100,7 +104,8 @@ export class LLMExtension extends BaseBotExtension {
         try {
 
 
-            const tools = this.gameModeTools[this.bot.mineflayerBot?.player.gamemode as unknown as GameMode]
+            let tools = this.gameModeTools[this.bot.mineflayerBot?.player.gamemode as unknown as GameMode]
+            tools = tools.concat(this.gameModeTools["any"])
 
             const response = await this.client.chat.completions.create({
                 model: process.env.LLM_MODEL || "openai/gpt-oss-20b",

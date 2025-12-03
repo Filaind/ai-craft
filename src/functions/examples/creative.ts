@@ -12,7 +12,7 @@ import data_loader from "minecraft-data";
 const Data = data_loader("1.21.1");
 
 LLMFunctions.register({
-    group: "creative",
+    gameMode: "creative",
     name: "take_item_from_creative",
     description: "Takes item or block from creative mode menu and places it into active quickbar slot",
     schema: z.object({
@@ -34,7 +34,7 @@ LLMFunctions.register({
 })
 
 LLMFunctions.register({
-    group: "creative",
+    gameMode: "creative",
     name: "break_block_at_position",
     description: "Instantaneously break block at specified coordinates. Make sure you can reach it with your hand.",
     schema: z.object({
