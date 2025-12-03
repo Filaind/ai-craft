@@ -104,7 +104,7 @@ export class LLMExtension extends BaseAgentExtension {
         try {
 
 
-            let tools = this.gameModeTools[this.agent.mineflayerBot?.player.gamemode as unknown as GameMode]
+            let tools = this.gameModeTools[this.agent.mineflayerBot?.game.gameMode || "any"]
             tools = tools.concat(this.gameModeTools["any"])
 
             const response = await this.client.chat.completions.create({
@@ -200,6 +200,7 @@ export class LLMExtension extends BaseAgentExtension {
             }
 
         } catch (error) {
+            console.log(error)
             console.error('Error in LLM request', JSON.stringify(error, null, 2))
             return 'Error in LLM request'
         }
