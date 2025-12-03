@@ -1,6 +1,6 @@
 import type { Agent } from "../../agent";
 import { LLMFunctions } from "../llm-functions";
-import { Movements, goals } from "mineflayer-pathfinder";
+import { goals } from "@miner-org/mineflayer-baritone";
 
 import z from "zod"
 import { Vec3 } from "vec3"
@@ -49,12 +49,14 @@ LLMFunctions.register({
 
         let block = mbot.blockAt(pos);
         if (!block) return `There is no block at ${pos_str}`;
-        let distance = mbot.entity.position.distanceTo(pos);
+        let distance = mbot.entity?.position.distanceTo(pos);
         if (distance > 4) return `Block is too far! Distance: ${distance}`;
 
-        const defaultMove = new Movements(agent.mineflayerBot!)
-        agent.mineflayerBot!.pathfinder.setMovements(defaultMove)
-        await mbot.pathfinder.goto(new goals.GoalBreakBlock(pos, mbot.world, { reach: 4 }))
+        const goal = new goals.GoalExact(new Vec3(pos.x, pos.y, pos.z));
+        
+        await agent.mineflayerBot!.ashfinder.goto(goal);
+
+
         return `"${block.displayName}" at ${pos_str} was broken.`
     }
 })

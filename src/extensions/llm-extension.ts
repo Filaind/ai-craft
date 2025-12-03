@@ -156,17 +156,17 @@ export class LLMExtension extends BaseAgentExtension {
 
                         const function_name = tool_call.function.name
 
-                        //Проверка на 3 подряд вызова одной функции
-                        if (this.functionCallHistory.length >= 2 &&
-                            this.functionCallHistory[this.functionCallHistory.length - 1] === function_name &&
-                            this.functionCallHistory[this.functionCallHistory.length - 2] === function_name) {
-                            console.log(`Penalty: Function ${function_name} called 3 times in a row, skipping`)
-                            this.messages.push({
-                                role: "assistant",
-                                content: `I can't call ${function_name} again, it's been called 3 times in a row`
-                            })
-                            continue
-                        }
+                        // //Проверка на 3 подряд вызова одной функции
+                        // if (this.functionCallHistory.length >= 2 &&
+                        //     this.functionCallHistory[this.functionCallHistory.length - 1] === function_name &&
+                        //     this.functionCallHistory[this.functionCallHistory.length - 2] === function_name) {
+                        //     console.log(`Penalty: Function ${function_name} called 3 times in a row, skipping`)
+                        //     this.messages.push({
+                        //         role: "assistant",
+                        //         content: `I can't call ${function_name} again, it's been called 3 times in a row`
+                        //     })
+                        //     continue
+                        // }
 
                         let function_arguments = JSON.parse(tool_call.function.arguments)
 
@@ -226,6 +226,7 @@ export class LLMExtension extends BaseAgentExtension {
                 this.saveMemory();
 
                 //Если нет tool calls, то возвращаем ответ
+                console.log("LLM finish response: ", choice.message.content!)
                 return choice.message.content!
             }
 
