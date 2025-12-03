@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@miner-org/mineflayer-baritone": "^4.2.3",
+    "google-translate-api-x": "^10.7.2",
     "mineflayer": "^4.33.0",
     "mineflayer-collectblock": "^1.6.0",
     "mineflayer-pvp": "^1.3.2",

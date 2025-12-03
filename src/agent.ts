@@ -5,6 +5,7 @@ import { LLMExtension } from './extensions/llm-extension';
 import OpenAI from 'openai';
 import fs from 'fs';
 import * as collectblockPlugin from 'mineflayer-collectblock'
+import { translateMessage } from './utils/translator';
 
 export class Agent {
     public mineflayerBot?: mineflayer.Bot;
@@ -44,10 +45,12 @@ export class Agent {
         this.mineflayerBot.on('stoppedAttacking', this.onStoppedAttacking.bind(this))
     }
 
-    sendChatMessage(message: string) {
+    async sendChatMessage(message: string) {
         const sanitized = message.replace(/[^a-zA-Zа-яА-Я0-9 .,!?-_:;'"()+]/g, '').trim();
         //хз
-        this.mineflayerBot!.chat("/say %" + sanitized);
+
+        const translated = await translateMessage(sanitized, 'ru');
+        this.mineflayerBot!.chat("/say %" + translated);
     }
 
     getBotDataPath() {
@@ -78,7 +81,8 @@ export class Agent {
         console.log('onChatMessage', username, message);
 
 
-        const response = await this.llm.getResponse(`User ${username} said: ${message}`)
+        const translated = await translateMessage(message, 'en');
+        const response = await this.llm.getResponse(`User ${username} said: ${translated}`)
 
         this.sendChatMessage(response)
 
