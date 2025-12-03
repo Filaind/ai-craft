@@ -111,6 +111,7 @@ export class LLMExtension extends BaseAgentExtension {
         console.log('LLM request');
         try {
             let tools = this.gameModeTools[this.agent.mineflayerBot!.game.gameMode]
+            
 
             const response = await this.client.chat.completions.create({
                 model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
