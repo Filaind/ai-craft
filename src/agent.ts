@@ -1,18 +1,15 @@
 import mineflayer, { type BotOptions } from 'mineflayer'
-import { pathfinder } from 'mineflayer-pathfinder';
+import pathfinder from "@miner-org/mineflayer-baritone"
 import * as pvp from 'mineflayer-pvp';
 import { LLMExtension } from './extensions/llm-extension';
 import OpenAI from 'openai';
 import fs from 'fs';
-import type { Entity } from 'prismarine-entity';
 import * as collectblockPlugin from 'mineflayer-collectblock'
-import type { LLMFunctionGroup } from './functions/llm-functions';
 
 export class Agent {
     public mineflayerBot?: mineflayer.Bot;
     private llm: LLMExtension;
 
-    private lastGameMode: mineflayer.GameMode = "survival";
 
     private static BOT_DATA_PATH: string = 'bots-data';
 
@@ -28,10 +25,12 @@ export class Agent {
             ...options,
         })
 
-        this.mineflayerBot.loadPlugin(pathfinder)
+        this.mineflayerBot.loadPlugin(pathfinder.loader)
         this.mineflayerBot.loadPlugin(pvp.plugin)
         this.mineflayerBot.loadPlugin(collectblockPlugin.plugin)
-        
+
+
+
         this.mineflayerBot.on('spawn', this.onSpawn.bind(this))
         this.mineflayerBot.on('chat', this.onChatMessage.bind(this))
 
@@ -40,13 +39,13 @@ export class Agent {
         this.mineflayerBot.on('error', console.log)
 
         //this.mineflayerBot.on('game', this.onGameStateChanged.bind(this))
-        
+
         //@ts-ignore
         this.mineflayerBot.on('stoppedAttacking', this.onStoppedAttacking.bind(this))
     }
 
     sendChatMessage(message: string) {
-        const sanitized = message.replace(/[^a-zA-Zа-яА-Я0-9 .,!?-_:;'"()]/g, '').trim();
+        const sanitized = message.replace(/[^a-zA-Zа-яА-Я0-9 .,!?-_:;'"()+]/g, '').trim();
         this.mineflayerBot!.chat("%" + sanitized);
     }
 
@@ -56,8 +55,12 @@ export class Agent {
 
     async onSpawn() {
         fs.mkdirSync(this.getBotDataPath(), { recursive: true });
-        
-        this.lastGameMode = this.mineflayerBot!.game.gameMode;
+        await this.mineflayerBot!.waitForChunksToLoad();
+
+        this.mineflayerBot!.ashfinder.config.parkour = true; // Allow parkour jumps
+        this.mineflayerBot!.ashfinder.config.breakBlocks = true; // Allow breaking blocks
+        this.mineflayerBot!.ashfinder.config.placeBlocks = true; // Allow placing blocks
+        this.mineflayerBot!.ashfinder.config.swimming = true; // Allow swimming
 
         console.log("Bot spawned", this.mineflayerBot!.username);
         const entity = this.mineflayerBot!.nearestEntity()

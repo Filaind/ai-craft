@@ -1,8 +1,9 @@
 import type { Agent } from "../../agent"
 import { Entity } from "prismarine-entity"
 import { LLMFunctions } from "../llm-functions"
-import { Movements, goals } from "mineflayer-pathfinder";
 import { z } from "zod";
+import { goals } from "@miner-org/mineflayer-baritone"
+import { Vec3 } from 'vec3';
 
 export function getNearbyEntities(agent: Agent, maxDistance = 16) {
     let entity_distances: { entity_id: string, entity: Entity, distance: number }[] = [];
@@ -25,12 +26,14 @@ LLMFunctions.register({
         z: z.number()
     }),
     handler: async (agent: Agent, args) => {
-        let mbot = agent.mineflayerBot!;
-        const defaultMove = new Movements(agent.mineflayerBot!)
-        mbot.pathfinder.setMovements(defaultMove)
-        
-        let goal = new goals.GoalNear(args.x, args.y, args.z, 1);
-        await mbot.pathfinder.goto(goal);
+
+        const goal = new goals.GoalExact(new Vec3(args.x, args.y, args.z));
+        await agent.mineflayerBot!.ashfinder.gotoSmart(goal, {
+            waypointThreshold: 75, // Use waypoints for distances > 75 blocks
+            forceWaypoints: false, // Force waypoint usage
+            forceAdaptive: true, // Use smart waypoint system with failure handling
+        });
+
         return `Reached to (${args.x}, ${args.y}, ${args.z})`;
     }
 })
@@ -47,12 +50,15 @@ LLMFunctions.register({
         let entity = mbot.entities[args.entity_id];
         if (!entity) return `Entity with ID ${args.entity_id} is not found!`;
 
-        const defaultMove = new Movements(agent.mineflayerBot!)
-        mbot.pathfinder.setMovements(defaultMove)
-
         let pos = entity.position;
-        let goal = new goals.GoalNear(pos.x, pos.y, pos.z, 2);
-        await mbot.pathfinder.goto(goal);
+        const goal = new goals.GoalExact(new Vec3(pos.x, pos.y, pos.z));
+        
+        await agent.mineflayerBot!.ashfinder.gotoSmart(goal, {
+            waypointThreshold: 75, // Use waypoints for distances > 75 blocks
+            forceWaypoints: false, // Force waypoint usage
+            forceAdaptive: true, // Use smart waypoint system with failure handling
+        });
+
         return `Reached to ${args.entity_id} at (${pos.x}, ${pos.y}, ${pos.z})`;
     }
 })
@@ -83,7 +89,7 @@ LLMFunctions.register({
     }),
     handler: async (agent: Agent, args) => {
         return {
-            message: getNearbyEntities(agent, args.max_distance).map(({entity_id, entity, distance}) => ({
+            message: getNearbyEntities(agent, args.max_distance).map(({ entity_id, entity, distance }) => ({
                 distance,
                 entity_id,
                 name: entity.name,
