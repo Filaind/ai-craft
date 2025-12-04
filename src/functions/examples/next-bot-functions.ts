@@ -136,33 +136,33 @@ LLMFunctions.register({
             z.array(
                 z.array(
                     z.string().describe("Minecraft block id. E.g. \"stone\", \"diamond_ore\", etc.")
-                ).describe("X blocks, length must match size.x")
-            ).describe("Z layers, length must match size.z")
-        ).describe("vertical Y layers, length must match size.y")
+                ).describe("X layers, length must match size.x")
+            ).describe("Y layers, length must match size.y")
+        ).describe("Z layers, length must match size.z")
     }),
     handler: async (agent: Agent, args) => {
         console.log(args);
 
-        for (let y = 0; y < args.size.y; y++) {
-            let layer_y = args.structure[y];
-            if (!layer_y) {
-                return `Error: missing Y layer ${y}`;
+        for (let z = 0; z < args.size.y; z++) {
+            let layer_z = args.structure[z];
+            if (!layer_z) {
+                return `Error: missing Z layer ${z}`;
             }
-            for (let z = 0; z < args.size.z; z++) {
-                let layer_z = layer_y[z]
-                if (!layer_z) {
-                    return `Error: missing Z layer ${z}`;
+            for (let y = 0; y < args.size.y; y++) {
+                let layer_y = layer_z[y]
+                if (!layer_y) {
+                    return `Error: missing Y layer ${y}`;
                 }
                 for (let x = 0; x < args.size.x; x++) {
-                    let layer_x = layer_y[z]
-                    if (!layer_x) {
+                    let layer_x = layer_y[x]
+                    if (layer_x === undefined) {
                         return `Error: missing X layer ${x}`;
                     }
-                    if (!layer_x) {
-                        continue;
+                    if (!layer_x || layer_x == "air") {
+                        continue; // just ignore it for now
                     }
-                    await sleep(0.1);
-                    agent.bot!.chat(`/setblock ${args.origin.x + x} ${args.origin.y + y} ${args.origin.z + z} ${block_id}`)
+                    await sleep(0.1); // to avoid complete spam
+                    agent.bot!.chat(`/setblock ${args.origin.x + x} ${args.origin.y + y} ${args.origin.z + z} ${layer_x}`)
                 }
             }
         }
