@@ -169,7 +169,8 @@ LLMFunctions.register({
 	schema: z.object({
 		tasks: z.array(z.object({
 			markdown: z.string().describe("Detailed task description in markdown format"),
-			priority: z.int().optional().describe("Task priority. Higher value = higher priority. Default: 0")
+			priority: z.int().optional().describe("Task priority. Higher value = higher priority. Default: 0"),
+			completed: z.boolean().optional().describe("Task completion flag. Default: false")
 		}))
 	}),
 	handler: async (agent: Agent, args) => {
