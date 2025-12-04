@@ -7,7 +7,8 @@ import type { Agent } from "../../agent"
 import { fa } from "zod/locales";
 
 export interface LLMTask {
-	markdown: string,
+	title: string,
+	markdown?: string,
 	priority?: number,
 	completed?: boolean
 }
@@ -60,12 +61,14 @@ export class LLMTaskList {
 	/**
 	 * Inserts new task at the beginning of the list.
 	 * Priority of the new task is set to the highest number in the list automatically.
-	 * @param markdown - task text string in markdown format
+	 * @param title - short task titke
+	 * @param markdown - detailed task description in markdown
 	 * no return, because new task is always at index 0
 	 */
-	addFront(markdown: string) {
+	addFront(title: string, markdown?: string) {
 		let first = this.list[0];
 		this.list.unshift({
+			title,
 			markdown,
 			priority: (first && first.priority) || 0,
 			completed: false
@@ -75,12 +78,14 @@ export class LLMTaskList {
 	/**
 	 * Inserts new task at the end of the list.
 	 * Priority of the new task is set to the lowest number in the list automatically.
-	 * @param markdown - task text string in markdown format
+	 * @param title - short task titke
+	 * @param markdown - detailed task description in markdown
 	 * @returns index of inserted task
 	 */
-	addBack(markdown: string): number {
+	addBack(title: string, markdown?: string): number {
 		let last = this.list[this.list.length - 1];
 		return this.list.push({
+			title,
 			markdown,
 			priority: (last && last.priority) || 0,
 			completed: false
@@ -89,15 +94,16 @@ export class LLMTaskList {
 
 	/**
 	 * Inserts new task in the list. Task is inserted based on provided priority.
-	 * @param markdown - task text string in markdown format
+	 * @param title - short task titke
+	 * @param markdown - detailed task description in markdown
 	 * @param priority - task priority
 	 * @returns index of inserted task
 	 */
-	add(markdown: string, priority: number = 0): number {
-		let task = {
-			markdown,
-			priority: priority || 0,
-			completed: false
+	add(task: LLMTask): number {
+		task = {
+			priority: 0,
+			completed: false,
+			...task
 		};
 
 		let i = this.list.findIndex((v) => v.priority! > task.priority!);
@@ -142,13 +148,15 @@ LLMFunctions.register({
 
 LLMFunctions.register({
 	name: "task_list",
-	description: "Returns list of all tasks, even if they are inactive. Tasks are sorted by priority.",
+	description: "Returns list of all tasks, even if they are inactive. Tasks are sorted by priority. Detailed task markdown description is ommited.",
 	schema: z.object({}),
 	handler: async (agent: Agent, args) => {
 		let list = agent.llm.tasks.get();
 		if (list.length == 0) return "Task list is empty!";
 		return {
-			message: list
+			message: list.map(({title, priority, completed}) => ({
+				title, priority, completed // don't send detailed description
+			}))
 		}
 	}
 })
@@ -165,10 +173,11 @@ LLMFunctions.register({
 
 LLMFunctions.register({
 	name: "task_set",
-	description: "Rewrite whole task list. List will be automatically sorted by priority",
+	description: "Rewrite whole task list. Tasks will be automatically sorted by priority",
 	schema: z.object({
 		tasks: z.array(z.object({
-			markdown: z.string().describe("Detailed task description in markdown format"),
+			title: z.string().describe("Short, descriptive title (max 10 words)"),
+			markdown: z.string().optional().describe("Detailed task description in markdown"),
 			priority: z.int().optional().describe("Task priority. Higher value = higher priority. Default: 0"),
 			completed: z.boolean().optional().describe("Task completion flag. Default: false")
 		}))
@@ -184,23 +193,26 @@ LLMFunctions.register({
 	name: "task_add",
 	description: "Inserts one task in the task list. Index of the new task will be determined based on provided priority.",
 	schema: z.object({
-		markdown: z.string().describe("Detailed task description in markdown format"),
-		priority: z.int().optional().describe("Task priority. Lower value = higher priority. Default: 0")
+		title: z.string().describe("Short, descriptive title (max 10 words)"),
+		markdown: z.string().optional().describe("Detailed task description in markdown"),
+		priority: z.int().optional().describe("Task priority. Higher value = higher priority. Default: 0")
 	}),
 	handler: async (agent: Agent, args) => {
-		let index = agent.llm.tasks.add(args.markdown, args.priority);
+		let index = agent.llm.tasks.add(args);
 		return `Task inserted at index ${index}`
 	}
 })
 
+/* not needed, if model is behaving normally
 LLMFunctions.register({
 	name: "task_add_front",
 	description: "Inserts one task at the front of the task list. Priority is set to the highest value in the list automatically",
 	schema: z.object({
-		markdown: z.string().describe("Detailed task description in markdown format")
+		title: z.string().describe("Short, descriptive title (max 10 words)"),
+		markdown: z.string().optional().describe("Detailed task description in markdown")
 	}),
 	handler: async (agent: Agent, args) => {
-		agent.llm.tasks.addFront(args.markdown);
+		agent.llm.tasks.addFront(args.title, args.markdown);
 		return `Task inserted at index 0`;
 	}
 })
@@ -209,10 +221,12 @@ LLMFunctions.register({
 	name: "task_add_back",
 	description: "Inserts one task at the end of the task list. Priority is set to the lowest value in the list automatically",
 	schema: z.object({
-		markdown: z.string().describe("Detailed task description in markdown format")
+		title: z.string().describe("Short, descriptive title (max 10 words)"),
+		markdown: z.string().optional().describe("Detailed task description in markdown")
 	}),
 	handler: async (agent: Agent, args) => {
-		let index = agent.llm.tasks.addBack(args.markdown);
+		let index = agent.llm.tasks.addBack(args.title, args.markdown);
 		return `Task inserted at index ${index}`
 	}
 })
+*/
