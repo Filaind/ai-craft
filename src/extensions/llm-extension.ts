@@ -149,7 +149,7 @@ export class LLMExtension extends BaseAgentExtension {
 
             logger.debug(`[LLM] Available tools: ${tools.map((t) => t.function.name).join(', ')}`);
 
-            let task_info = this.tasks.active_info();
+            let task_info = this.tasks.activeInfo();
 
             const response = await this.client.chat.completions.create({
                 model: process.env.LLM_MODEL || "openai/gpt-oss-20b",

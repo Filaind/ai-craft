@@ -4,7 +4,6 @@ import { z } from "zod"
 
 import { LLMFunctions } from "../llm-functions";
 import type { Agent } from "../../agent"
-import { fa } from "zod/locales";
 
 export interface LLMTask {
 	/**
@@ -53,7 +52,7 @@ export class LLMTaskList {
 			completed: false,
 			...task
 		}));
-		this.list = new_tasks.sort((a, b) => a.priority - b.priority);
+		this.list = new_tasks.sort((a, b) => b.priority - a.priority);
 		return new_tasks.map((v) => this.list.indexOf(v));
 	}
 
@@ -62,6 +61,14 @@ export class LLMTaskList {
 	 */
 	clear() {
 		this.list = [];
+	}
+
+	/**
+	 * Get index of currently active (not completed) task
+	 * @returns index of active task (or -1 if no active tasks found)
+	 */
+	activeIndex(): number {
+		return this.list.findIndex((v) => !v.completed)
 	}
 
 	/**
@@ -76,7 +83,7 @@ export class LLMTaskList {
 	 * Get information about currently active task
 	 * @returns task description or title
 	 */
-	active_info(): string | undefined {
+	activeInfo(): string | undefined {
 		let active_task = this.active();
 		if (!active_task) return undefined;
 		return active_task.markdown || active_task.title;
@@ -85,31 +92,37 @@ export class LLMTaskList {
 	/**
 	 * Marks currently active task as completed
 	 */
-	mark_completed() {
+	markCompleted() {
 		let task = this.active()
 		if (task) task.completed = true;
 	}
 
 	/**
-	 * Inserts new task at the beginning of the list.
-	 * Priority of the new task is set to the highest number in the list automatically.
+	 * Inserts new task before currently active one.
+	 * If priority is not provided, it is set to the same value as in currently active task.
 	 * @param task - task to insert
 	 * @returns index of inserted task (-1 if priority check failed)
 	 */
 	addFront(task: LLMTaskDescription) {
-		let first = this.list[0];
-		if (first!.priority > task.priority!) return -1;
-		this.list.unshift({
-			priority: (first && first.priority) || 0,
+		let index = this.activeIndex();
+		if (index < 0) {
+			// active task not found, append to the end of the list
+			index = this.list.length;
+		} else {
+			// active task found, check task priority
+			if (this.list[index]!.priority > task.priority!) return -1;
+		}
+		this.list.splice(index, 0, {
+			priority: task.priority || 0,
 			completed: false,
 			...task
 		})
-		return 0;
+		return index;
 	}
 
 	/**
 	 * Inserts new task at the end of the list.
-	 * Priority of the new task is set to the lowest number in the list automatically.
+	 * If priority is not provided, it is set to the lowest number in the list.
 	 * @param task - task to insert
 	 * @returns index of inserted task (-1 if priority check failed)
 	 */
@@ -167,10 +180,10 @@ LLMFunctions.register({
 
 LLMFunctions.register({
 	name: "task_mark_completed",
-	description: "Mark currently active task as completed. Completed tasks become inactive",
+	description: "Marks currently active task as completed. Completed tasks become inactive",
 	schema: z.object(),
 	handler: async (agent: Agent, args) => {
-		agent.llm.tasks.mark_completed()
+		agent.llm.tasks.markCompleted()
 		return "Task marked as completed";
 	}
 })
@@ -202,7 +215,7 @@ LLMFunctions.register({
 
 LLMFunctions.register({
 	name: "task_set",
-	description: "Rewrite whole task list. Tasks will be automatically sorted by priority",
+	description: "Rewrites whole task list. Tasks will be automatically sorted by priority",
 	schema: z.object({
 		tasks: z.array(z.object({
 			title: z.string().describe("Short, descriptive title (max 10 words)"),
@@ -248,14 +261,14 @@ LLMFunctions.register({
 /* not needed, if model is behaving normally
 LLMFunctions.register({
 	name: "task_add_front",
-	description: "Inserts one task at the front of the task list. Priority is set to the highest value in the list automatically",
+	description: "Inserts one task before currently active one. Priority is set to the same value as in active task.",
 	schema: z.object({
 		title: z.string().describe("Short, descriptive title (max 10 words)"),
 		markdown: z.string().optional().describe("Detailed task description in markdown")
 	}),
 	handler: async (agent: Agent, args) => {
-		agent.llm.tasks.addFront(args);
-		return `Task inserted at index 0`;
+		let index = agent.llm.tasks.addFront(args);
+		return `Task inserted at index ${index}`
 	}
 })
 
