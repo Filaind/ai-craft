@@ -143,7 +143,7 @@ LLMFunctions.register({
     handler: async (agent: Agent, args) => {
         console.log(args);
 
-        for (let z = 0; z < args.size.y; z++) {
+        for (let z = 0; z < args.size.z; z++) {
             let layer_z = args.structure[z];
             if (!layer_z) {
                 return `Error: missing Z layer ${z}`;
@@ -158,8 +158,8 @@ LLMFunctions.register({
                     if (layer_x === undefined) {
                         return `Error: missing X layer ${x}`;
                     }
-                    if (!layer_x || layer_x == "air") {
-                        continue; // just ignore it for now
+                    if (!layer_x || layer_x == "") {
+                        layer_x = "air";
                     }
                     await sleep(0.1); // to avoid complete spam
                     agent.bot!.chat(`/setblock ${args.origin.x + x} ${args.origin.y + y} ${args.origin.z + z} ${layer_x}`)
