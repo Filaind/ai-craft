@@ -128,6 +128,7 @@ export class LLMExtension extends BaseAgentExtension {
             })
         }
 
+        /*
         const inventory = this.agent.bot!.inventory.items().map((item) => {
             return {
                 name: item.name,
@@ -135,6 +136,7 @@ export class LLMExtension extends BaseAgentExtension {
                 type: item.type
             }
         })
+        */
 
         logger.info('[LLM] Starting request');
         const startTime = Date.now();
@@ -157,10 +159,10 @@ export class LLMExtension extends BaseAgentExtension {
                     {
                         role: "user",
                         content: `
-                        Your inventory: ${JSON.stringify(inventory)}
                         Your position: ${this.agent.bot!.entity.position}
                         ${task_info ? `Your active task is:\n${task_info}` : "You have no active tasks"}
                         `
+                        //Your inventory: ${JSON.stringify(inventory)}
                     },
                     ...this.messages
                 ],

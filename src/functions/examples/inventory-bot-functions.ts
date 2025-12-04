@@ -45,24 +45,16 @@ export async function giveToPlayer(agent: Agent, itemType: string, entity: Entit
     return `Failed to give ${itemType} to ${entity.username}, it was never received.`;
 }
 
-// LLMFunctions.register({
-//     name: "show_inventory",
-//     parameters: {
-//         type: "object",
-//         properties: {}
-//     },
-//     function: (args: { bot: Bot }) => {
-//         return args.bot.bot!.inventory.items().map((item) => {
-//             return {
-//                 name: item.name,
-//                 count: item.count,
-//                 type: item.type
-//             }
-//         })
-//     },
-//     strict: true,
-//     type: 'function'
-// })
+LLMFunctions.register({
+    name: "check_inventory",
+    description: "Returns list of items in inventory",
+    schema: z.object({}),
+    handler: async (agent: Agent, args) => ({
+        message: agent.bot!.inventory.items().map(({slot, name, count, type}) => ({
+            slot, name, count, type
+        }))
+    })
+})
 
 LLMFunctions.register({
     name: "give_item_to_entity",
