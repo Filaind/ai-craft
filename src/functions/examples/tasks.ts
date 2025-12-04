@@ -31,7 +31,7 @@ export class LLMTaskList {
 			priority: 0,
 			completed: false,
 			...task
-		})).sort((a, b) => b.priority - a.priority);
+		})).sort((a, b) => a.priority - b.priority);
 	}
 
 	/**
@@ -51,22 +51,17 @@ export class LLMTaskList {
 
 	/**
 	 * Marks currently active task as completed
-	 * @returns next active task
 	 */
-	mark_completed(): LLMTask | undefined {
+	mark_completed() {
 		let task = this.active()
-		if (task) {
-			task.completed = true;
-			return this.active(); // next active task
-		}
-		return undefined;
+		if (task) task.completed = true;
 	}
 
 	/**
 	 * Inserts new task at the beginning of the list.
 	 * Priority of the new task is set to the highest number in the list automatically.
 	 * @param markdown - task text string in markdown format
-	 * no return, because active task is always changed here
+	 * no return, because new task is always at index 0
 	 */
 	addFront(markdown: string) {
 		let first = this.list[0];
@@ -81,25 +76,24 @@ export class LLMTaskList {
 	 * Inserts new task at the end of the list.
 	 * Priority of the new task is set to the lowest number in the list automatically.
 	 * @param markdown - task text string in markdown format
-	 * @returns true - active task is changed, false - active task is not changed
+	 * @returns index of inserted task
 	 */
-	addBack(markdown: string): boolean {
+	addBack(markdown: string): number {
 		let last = this.list[this.list.length - 1];
-		this.list.push({
+		return this.list.push({
 			markdown,
 			priority: (last && last.priority) || 0,
 			completed: false
 		})
-		return last === undefined;
 	}
 
 	/**
 	 * Inserts new task in the list. Task is inserted based on provided priority.
 	 * @param markdown - task text string in markdown format
 	 * @param priority - task priority
-	 * @returns true - active task is changed, false - active task is not changed
+	 * @returns index of inserted task
 	 */
-	add(markdown: string, priority: number = 0): boolean {
+	add(markdown: string, priority: number = 0): number {
 		let task = {
 			markdown,
 			priority: priority || 0,
@@ -109,12 +103,22 @@ export class LLMTaskList {
 		let i = this.list.findIndex((v) => v.priority! > task.priority!);
 		if (i < 0) i = this.list.length;
 		this.list.splice(i, 0, task)
-		return i == 0;
+		return i;
+	}
+
+	/**
+	 * Removes task at specified index
+	 * @param index - index of the task to remove
+	 * @returns removed task
+	 */
+	remove(index: number): LLMTask | undefined {
+		let removed = this.list.splice(index, 1)
+		return (removed && removed.length > 0) ? removed[0] : undefined;
 	}
 }
 
 LLMFunctions.register({
-	name: "task_active",
+	name: "task_get_active",
 	description: "Returns currently active (not completed) task",
 	schema: z.object({}),
 	handler: async (agent: Agent, args) => {
@@ -131,15 +135,14 @@ LLMFunctions.register({
 	description: "Mark currently active task as completed. Completed tasks become inactive",
 	schema: z.object(),
 	handler: async (agent: Agent, args) => {
-		let new_active = agent.llm.tasks.mark_completed()
-		let message = new_active ? `New active task is:\n${new_active.markdown}` : "There is no active tasks left!";
-		return "Task marked as completed.\n" + message;
+		agent.llm.tasks.mark_completed()
+		return "Task marked as completed";
 	}
 })
 
 LLMFunctions.register({
 	name: "task_list",
-	description: "Returns all tasks, even if they are inactive. Tasks are sorted by priority.",
+	description: "Returns list of all tasks, even if they are inactive. Tasks are sorted by priority.",
 	schema: z.object({}),
 	handler: async (agent: Agent, args) => {
 		let list = agent.llm.tasks.get();
@@ -147,6 +150,16 @@ LLMFunctions.register({
 		return {
 			message: list
 		}
+	}
+})
+
+LLMFunctions.register({
+	name: "task_clear",
+	description: "Removes all tasks from the list",
+	schema: z.object(),
+	handler: async (agent: Agent, args) => {
+		agent.llm.tasks.clear()
+		return "Task list is cleared";
 	}
 })
 
@@ -162,8 +175,7 @@ LLMFunctions.register({
 	handler: async (agent: Agent, args) => {
 		if (args.tasks.length == 0) return "No task list provided!";
 		agent.llm.tasks.set(args.tasks);
-		let active = agent.llm.tasks.active()!;
-		return "Task list updated.\nNew active task is:\n" + JSON.stringify(active);
+		return "Task list updated";
 	}
 })
 
@@ -175,8 +187,8 @@ LLMFunctions.register({
 		priority: z.int().optional().describe("Task priority. Lower value = higher priority. Default: 0")
 	}),
 	handler: async (agent: Agent, args) => {
-		let active_changed = agent.llm.tasks.add(args.markdown, args.priority);
-		return `Task inserted.\nActive task ${active_changed ? "changed" : "not changed"}.`
+		let index = agent.llm.tasks.add(args.markdown, args.priority);
+		return `Task inserted at index ${index}`
 	}
 })
 
@@ -188,7 +200,7 @@ LLMFunctions.register({
 	}),
 	handler: async (agent: Agent, args) => {
 		agent.llm.tasks.addFront(args.markdown);
-		return `Task inserted.\nActive task changed.`
+		return `Task inserted at index 0`;
 	}
 })
 
@@ -199,7 +211,7 @@ LLMFunctions.register({
 		markdown: z.string().describe("Detailed task description in markdown format")
 	}),
 	handler: async (agent: Agent, args) => {
-		let active_changed = agent.llm.tasks.addBack(args.markdown);
-		return `Task inserted.\nActive task ${active_changed ? "changed" : "not changed"}.`
+		let index = agent.llm.tasks.addBack(args.markdown);
+		return `Task inserted at index ${index}`
 	}
 })
