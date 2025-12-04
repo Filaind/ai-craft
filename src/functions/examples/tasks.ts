@@ -104,20 +104,11 @@ export class LLMTaskList {
 	 * @returns index of inserted task (-1 if priority check failed)
 	 */
 	addFront(task: LLMTaskDescription) {
-		let index = this.activeIndex();
-		if (index < 0) {
-			// active task not found, append to the end of the list
-			index = this.list.length;
-		} else {
-			// active task found, check task priority
-			if (this.list[index]!.priority > task.priority!) return -1;
+		let i = this.activeIndex();
+		if (i < 0) {
+			return this.addBack(task);
 		}
-		this.list.splice(index, 0, {
-			priority: task.priority || 0,
-			completed: false,
-			...task
-		})
-		return index;
+		return this.insert(i, task);
 	}
 
 	/**
@@ -127,31 +118,53 @@ export class LLMTaskList {
 	 * @returns index of inserted task (-1 if priority check failed)
 	 */
 	addBack(task: LLMTaskDescription): number {
-		let last = this.list[this.list.length - 1];
-		if (last!.priority < task.priority!) return -1;
-		return this.list.push({
-			priority: (last && last.priority) || 0,
+		let last_priority = this.list[this.list.length - 1]?.priority!;
+		if (last_priority < task.priority!) return -1;
+		let index = this.list.push({
+			priority: last_priority || 0,
 			completed: false,
 			...task
-		})
+		}) - 1;
+		return index
 	}
 
 	/**
 	 * Inserts new task in the list. Task is inserted based on provided priority.
 	 * @param task - task to insert
-	 * @returns index of inserted task
+	 * @returns index of inserted task (-1 if priority check failed)
 	 */
 	add(task: LLMTaskDescription): number {
+		let i = this.list.findIndex((v) => v.priority < task.priority!);
+		if (i < 0) {
+			return this.addBack(task);
+		}
+		return this.insert(i, task);
+	}
+
+	/**
+	 * Inserts new task in the list.
+	 * @param i - index in the list to insert task to
+	 * @param task - task to insert
+	 * @returns index of inserted task (-1 if priority check failed)
+	 */
+	insert(i: number, task: LLMTaskDescription): number {
+		let next_priority = this.list[i]?.priority!;
+
+		if (task.priority !== undefined) { // if priority is provided, check it
+			// previous item must have the same or greater priority
+			let prev_priority = this.list[i-1]?.priority!;
+			if (prev_priority < task.priority) return -1;
+			// next item must have the same or lower priority
+			if (next_priority > task.priority) return -1;
+		}
+
 		let new_task: LLMTask = {
-			priority: 0,
+			priority: next_priority || 0,
 			completed: false,
 			...task
 		};
-
-		let i = this.list.findIndex((v) => v.priority > new_task.priority);
-		if (i < 0) i = this.list.length;
 		this.list.splice(i, 0, new_task)
-		return i;
+		return this.list.indexOf(new_task);
 	}
 
 	/**
@@ -160,8 +173,7 @@ export class LLMTaskList {
 	 * @returns removed task
 	 */
 	remove(index: number): LLMTask | undefined {
-		let removed = this.list.splice(index, 1)
-		return (removed && removed.length > 0) ? removed[0] : undefined;
+		return this.list.splice(index, 1)[0];
 	}
 }
 
@@ -215,7 +227,7 @@ LLMFunctions.register({
 
 LLMFunctions.register({
 	name: "task_set",
-	description: "Rewrites whole task list. Tasks will be automatically sorted by priority",
+	description: "Rewrites whole task list. Tasks will be automatically sorted by priority. Order of tasks with the same priority is not changed.",
 	schema: z.object({
 		tasks: z.array(z.object({
 			title: z.string().describe("Short, descriptive title (max 10 words)"),
@@ -241,6 +253,29 @@ LLMFunctions.register({
 	}),
 	handler: async (agent: Agent, args) => {
 		let index = agent.llm.tasks.add(args);
+		if (index < 0) {
+			return `Failed to create a task`;
+		}
+		return `Task inserted at index ${index}`
+	}
+})
+
+LLMFunctions.register({
+	name: "task_insert",
+	description: "Inserts one task in the task list by index. Use this function only if necessary.",
+	schema: z.object({
+		index: z.int().describe("Index in the list to insert task to"),
+		title: z.string().describe("Short, descriptive title (max 10 words)"),
+		markdown: z.string().optional().describe("Detailed task description in markdown"),
+	}),
+	handler: async (agent: Agent, args) => {
+		let index = agent.llm.tasks.insert(args.index, {
+			title: args.title,
+			markdown: args.markdown
+		});
+		if (index < 0) {
+			return `Failed to create a task at index ${args.index}`;
+		}
 		return `Task inserted at index ${index}`
 	}
 })
@@ -268,6 +303,9 @@ LLMFunctions.register({
 	}),
 	handler: async (agent: Agent, args) => {
 		let index = agent.llm.tasks.addFront(args);
+		if (index < 0) {
+			return `Failed to create a task`;
+		}
 		return `Task inserted at index ${index}`
 	}
 })
@@ -281,6 +319,9 @@ LLMFunctions.register({
 	}),
 	handler: async (agent: Agent, args) => {
 		let index = agent.llm.tasks.addBack(args);
+		if (index < 0) {
+			return `Failed to create a task`;
+		}
 		return `Task inserted at index ${index}`
 	}
 })
