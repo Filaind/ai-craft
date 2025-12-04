@@ -192,7 +192,7 @@ LLMFunctions.register({
 
 LLMFunctions.register({
 	name: "task_clear",
-	description: "Removes all tasks from the list",
+	description: "Removes all tasks from the list. Use it if you made a big error when creating task list or when you are sure that all tasks are completed.",
 	schema: z.object(),
 	handler: async (agent: Agent, args) => {
 		agent.llm.tasks.clear()
@@ -229,6 +229,19 @@ LLMFunctions.register({
 	handler: async (agent: Agent, args) => {
 		let index = agent.llm.tasks.add(args);
 		return `Task inserted at index ${index}`
+	}
+})
+
+LLMFunctions.register({
+	name: "task_remove",
+	description: "Removes task from the list. Use this function only if necessary. If active task is completed, use 'task_mark_completed'.",
+	schema: z.object({
+		index: z.int().describe("Index of the task to remove"),
+	}),
+	handler: async (agent: Agent, args) => {
+		let task = agent.llm.tasks.remove(args.index);
+		if (!task) return `Task with index ${args.index} is not found!`;
+		return `Task '${task.title}' at index ${args.index} is removed`
 	}
 })
 
