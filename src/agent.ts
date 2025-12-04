@@ -74,8 +74,8 @@ export class Agent {
 
         console.log('onChatMessage', username, message);
 
-        const translated = await translateMessage(message, 'en');
-        const response = await this.llm.getResponse(`User ${username} said: ${translated}`)
+        //const translated = await translateMessage(message, 'en');
+        const response = await this.llm.getResponse(`User ${username} said: ${message}`)
 
         this.sendChatMessage(response)
 

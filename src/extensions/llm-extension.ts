@@ -10,6 +10,7 @@ import { logger } from "../../index";
 
 import { type LLMFunctionTool, type LLMFunctionGroup, type LLMFunctionGroups, type LLMFunctionResult, LLMFunctions } from "../functions/llm-functions";
 import { LLMTaskList, type LLMTask } from '../functions/examples/tasks';
+import { sleep } from 'bun';
 
 type ChatMessage = ChatCompletionMessageParam & {
     tool_name?: string;
@@ -154,120 +155,131 @@ export class LLMExtension extends BaseAgentExtension {
 
             let task_info = this.tasks.activeInfo();
 
-            const response = await this.client.chat.completions.create({
-                model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
-                tool_choice: "auto",
-                tools: tools,
-                messages: [
-                    {
-                        role: "user",
-                        content: `
-                        Your position: ${this.agent.bot!.entity.position}
-                        ${task_info ? `Your active task is:\n${task_info}` : "You have no active tasks"}
-                        `
-                        //Your inventory: ${JSON.stringify(inventory)}
-                    },
-                    ...this.messages
-                ],
-            });
-            logger.info(`[LLM] Request completed in ${Date.now() - startTime}ms`);
+            while (true) {
+                //await sleep(5); // 'rate limiter'
 
-            const choice = response.choices[0]!
-
-            //Если есть tool calls, то вызываем функции
-            if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
-                logger.info(`[LLM] Processing ${choice.message.tool_calls.length} tool call(s)`);
-
-                //Добавляем сообщение ассистента с tool_calls в историю
                 this.messages.push({
-                    role: "assistant",
-                    content: choice.message.content || "",
-                    tool_calls: choice.message.tool_calls
+                    role: "developer",
+                    content: `
+                    Your position: ${this.agent.bot!.entity.position}
+                    ${task_info ? `Your active task is:\n${task_info}` : "You have no active tasks"}
+                    `
                 })
 
-                for (const tool_call of choice.message.tool_calls) {
-                    if (tool_call.type == "function") {
+                const response = await this.client.chat.completions.create({
+                    model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
+                    tool_choice: this.tasks.active() ? "required" : "auto",
+                    tools: tools,
+                    temperature: parseFloat(process.env.LLM_TEMPERATURE || "1.0"),
+                    messages: this.messages,
+                    parallel_tool_calls: false
+                });
+                logger.info(`[LLM] Request completed in ${Date.now() - startTime}ms`);
 
-                        logger.debug({ tool_call }, `[Tool call] Executing: `);
+                const choice = response.choices[0]!
 
-                        const function_name = tool_call.function.name
+                //Если есть tool calls, то вызываем функции
+                if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
+                    logger.info(`[LLM] Processing ${choice.message.tool_calls.length} tool call(s)`);
 
-                        // //Проверка на 3 подряд вызова одной функции
-                        // if (this.functionCallHistory.length >= 2 &&
-                        //     this.functionCallHistory[this.functionCallHistory.length - 1] === function_name &&
-                        //     this.functionCallHistory[this.functionCallHistory.length - 2] === function_name) {
-                        //     console.log(`Penalty: Function ${function_name} called 3 times in a row, skipping`)
-                        //     this.messages.push({
-                        //         role: "assistant",
-                        //         content: `I can't call ${function_name} again, it's been called 3 times in a row`
-                        //     })
-                        //     continue
-                        // }
+                    for (const tool_call of choice.message.tool_calls) {
+                        if (tool_call.type == "function") {
 
-                        let function_arguments = JSON.parse(tool_call.function.arguments)
+                            logger.debug({ tool_call }, `[Tool call] Executing: `);
 
-                        // this.bot.bot!.chat("Calling function: " + function_name + " with arguments: " + tool_call.function.arguments)
+                            const function_name = tool_call.function.name
 
-                        const ret = await LLMFunctions.invokeFunction(function_name, this.agent, function_arguments)
-                        const result: LLMFunctionResult = (typeof (ret) == "string") ? { message: ret } : ret;
+                            // //Проверка на 3 подряд вызова одной функции
+                            // if (this.functionCallHistory.length >= 2 &&
+                            //     this.functionCallHistory[this.functionCallHistory.length - 1] === function_name &&
+                            //     this.functionCallHistory[this.functionCallHistory.length - 2] === function_name) {
+                            //     console.log(`Penalty: Function ${function_name} called 3 times in a row, skipping`)
+                            //     this.messages.push({
+                            //         role: "assistant",
+                            //         content: `I can't call ${function_name} again, it's been called 3 times in a row`
+                            //     })
+                            //     continue
+                            // }
 
-                        logger.debug({ result }, `[Tool call] Result: `);
+                            let function_arguments = JSON.parse(tool_call.function.arguments)
 
-                        this.messages.push({
-                            role: "tool",
-                            tool_call_id: tool_call.id,
-                            tool_name: function_name,
-                            content: JSON.stringify(result.message)
-                        })
+                            // this.bot.bot!.chat("Calling function: " + function_name + " with arguments: " + tool_call.function.arguments)
 
-                        //Добавляем функцию в историю вызовов
-                        this.functionCallHistory.push(function_name)
-                        //Ограничиваем историю последними 3 вызовами
-                        if (this.functionCallHistory.length > 3) {
-                            this.functionCallHistory.shift()
-                        }
+                            const promise = LLMFunctions.invokeFunction(function_name, this.agent, function_arguments);
+                            /*if (typeof(promise) === "string") {
+                                logger.warn(`[Tool call] Failed to call function ${function_name}. Error: ${promise}`)
+                                continue;
+                            }*/
 
-                        this.saveMemory();
+                            const ret = await promise;
+                            const result: LLMFunctionResult = (typeof (ret) == "string") ? { message: ret } : ret;
+                            logger.debug({ result }, `[Tool call] Result: `);
 
-                        //Костыль для остановки вызова функций. Например если боту надо сначала дойти до цели, то мы останавливаем вызов функций и возвращаем сообщение.
-                        if (result.stop_calling) {
-                            logger.warn(`[Tool call] Stopping function calls due to stop_calling flag from ${function_name}`)
-                            return result.message
+                            this.messages.push({
+                                role: "assistant",
+                                content: choice.message.content || "",
+                                tool_calls: [ tool_call ]
+                            }, {
+                                role: "tool",
+                                tool_call_id: tool_call.id,
+                                tool_name: function_name,
+                                content: JSON.stringify(result.message)
+                            })
+                            choice.message.content = ""; //костыль, что бы убрать сообщение из следующих инструментов
+
+                            //Добавляем функцию в историю вызовов
+                            this.functionCallHistory.push(function_name)
+                            //Ограничиваем историю последними 3 вызовами
+                            if (this.functionCallHistory.length > 3) {
+                                this.functionCallHistory.shift()
+                            }
+
+                            this.saveMemory();
+
+                            //Костыль для остановки вызова функций. Например если боту надо сначала дойти до цели, то мы останавливаем вызов функций и возвращаем сообщение.
+                            if (result.stop_calling) {
+                                logger.warn(`[Tool call] Stopping function calls due to stop_calling flag from ${function_name}`)
+                                return result.message
+                            }
                         }
                     }
+                    //Рекурсивно вызываем дальше для получения следующего ответа
+                    
+                    if (!this.tasks.active()) {
+                        return this.getResponse()
+                    }
                 }
-                //Рекурсивно вызываем дальше для получения следующего ответа
-                return this.getResponse()
-            }
-            else {
+                else {
 
-                //Модель обосралась на вызовы функций, иногда возвращает reasoning вместо content
-                //choice.message.reasoning - не существует в openai
-                //@ts-ignore
-                if (choice.message.role == "assistant" && choice.message.content == null) {
+                    //Модель обосралась на вызовы функций, иногда возвращает reasoning вместо content
+                    //choice.message.reasoning - не существует в openai
+                    //@ts-ignore
+                    if (choice.message.role == "assistant" && choice.message.content == null) {
+                        this.messages.push({
+                            role: "assistant",
+                            //@ts-ignore
+                            content: choice.message.reasoning!
+                        })
+                        //Повторяем запрос, чтобы модель могла пофиксила свою ошибку
+                        return this.getResponse()
+                    }
+
+
                     this.messages.push({
                         role: "assistant",
-                        //@ts-ignore
-                        content: choice.message.reasoning!
+                        content: choice.message.content!
                     })
-                    //Повторяем запрос, чтобы модель могла пофиксила свою ошибку
-                    return this.getResponse()
+
+                    //this.tidyMemory();
+                    this.saveMemory();
+
+                    //Если нет tool calls, то возвращаем ответ
+                    logger.info(`[LLM] Finish response: ${choice.message.content!}`);
+                    if (!this.tasks.active()) {
+                        return choice.message.content!
+                    }
                 }
-
-
-                this.messages.push({
-                    role: "assistant",
-                    content: choice.message.content!
-                })
-
-                //this.tidyMemory();
-                this.saveMemory();
-
-                //Если нет tool calls, то возвращаем ответ
-                logger.info(`[LLM] Finish response: ${choice.message.content!}`);
-                return choice.message.content!
             }
-
         } catch (error) {
             logger.error(`[LLM] Error: ${JSON.stringify(error, null, 2)}`);
             return 'Error in LLM request'

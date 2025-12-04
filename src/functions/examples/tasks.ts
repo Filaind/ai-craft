@@ -91,10 +91,23 @@ export class LLMTaskList {
 
 	/**
 	 * Marks currently active task as completed
+	 * @returns index of the task that marked completed
 	 */
-	markCompleted() {
-		let task = this.active()
-		if (task) task.completed = true;
+	markCompleted(): number {
+		let i = this.activeIndex();
+		if (i >= 0) this.list[i]!.completed = true;
+		return i;
+	}
+
+	/**
+	 * Marks task as incomplete
+	 * @param i - index of the task to mark incomplete
+	 * @returns task that marked incomplete
+	 */
+	markIncomplete(i: number): LLMTask | undefined {
+		let task = this.list[i];
+		if (task) task.completed = false;
+		return task;
 	}
 
 	/**
@@ -191,12 +204,26 @@ LLMFunctions.register({
 })
 
 LLMFunctions.register({
-	name: "task_mark_completed",
-	description: "Marks currently active task as completed. Completed tasks become inactive",
-	schema: z.object(),
+	name: "task_completed",
+	description: "Marks currently active task as completed. Completed tasks become inactive. Use this tool if you are absolutly sure that task is completed successfully.",
+	schema: z.object({}),
 	handler: async (agent: Agent, args) => {
-		agent.llm.tasks.markCompleted()
-		return "Task marked as completed";
+		let index = agent.llm.tasks.markCompleted();
+		if (index < 0) return `There is no active tasks to mark complete!`;
+		return `Task at index ${index} marked as completed`;
+	}
+})
+
+LLMFunctions.register({
+	name: "task_revert",
+	description: "Revert task at specified index to incomplete state. Use this tool to correct mistakenly completed task.",
+	schema: z.object({
+		index: z.int().describe("Index of task to mark incomplete.")
+	}),
+	handler: async (agent: Agent, args) => {
+		let task = agent.llm.tasks.markIncomplete(args.index);
+		if (!task) return `Task with index ${args.index} is not found!`;
+		return `Task '${task.title}' reverted to incomplete state`;
 	}
 })
 

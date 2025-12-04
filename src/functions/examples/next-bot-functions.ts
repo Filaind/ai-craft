@@ -9,6 +9,8 @@ import { Vec3 } from 'vec3';
 
 import z from "zod";
 
+import { sleep } from 'bun';
+
 export function getNearestBlocksWhere(agent: Agent, predicate: (block: Block) => boolean, distance = 8, count = 10000) {
     const bot = agent.bot!;
 
@@ -117,22 +119,52 @@ LLMFunctions.register({
 
 LLMFunctions.register({
     gameMode: "creative",
-    name: "place_block",
-    description: "Place batch of blocks of the given type.",
+    name: "place_structure",
+    description: "Place structure of blocks of the given type.",
     schema: z.object({
-        blocks: z.array(
-            z.tuple([
-                z.int().describe("x"),
-                z.int().describe("y"), 
-                z.int().describe("z"),
-                z.string().describe("block type, for example 'oak_log', 'coal_ore', 'diamond_ore', 'emerald_ore', 'iron_ore', 'gold_ore', 'lapis_lazuli_ore', 'redstone_ore', 'dirt', 'cobblestone', 'stone', 'grass_block', 'water', 'lava', 'obsidian' etc.")
-            ])
-        ).max(50).describe("List of blocks as [x,y,z,type]")
+        origin: z.object({
+            x: z.int(),
+            y: z.int(),
+            z: z.int(),
+        }).describe("minimal x,y,z coordinated of the whole structure"),
+        size: z.object({
+            x: z.int(),
+            y: z.int(),
+            z: z.int(),
+        }).describe("bounding box of the structure, defines dimensions of 'blocks'"),
+        structure: z.array(
+            z.array(
+                z.array(
+                    z.string().describe("Minecraft block id. E.g. \"stone\", \"diamond_ore\", etc.")
+                ).describe("X blocks, length must match size.x")
+            ).describe("Z layers, length must match size.z")
+        ).describe("vertical Y layers, length must match size.y")
     }),
     handler: async (agent: Agent, args) => {
-        for (const [x, y, z, block_type] of args.blocks) {
-            const setblockCommand = `/setblock ${x} ${y} ${z} ${block_type}`;
-            agent.bot!.chat(setblockCommand);
+        console.log(args);
+
+        for (let y = 0; y < args.size.y; y++) {
+            let layer_y = args.structure[y];
+            if (!layer_y) {
+                return `Error: missing Y layer ${y}`;
+            }
+            for (let z = 0; z < args.size.z; z++) {
+                let layer_z = layer_y[z]
+                if (!layer_z) {
+                    return `Error: missing Z layer ${z}`;
+                }
+                for (let x = 0; x < args.size.x; x++) {
+                    let layer_x = layer_y[z]
+                    if (!layer_x) {
+                        return `Error: missing X layer ${x}`;
+                    }
+                    if (!layer_x) {
+                        continue;
+                    }
+                    await sleep(0.1);
+                    agent.bot!.chat(`/setblock ${args.origin.x + x} ${args.origin.y + y} ${args.origin.z + z} ${block_id}`)
+                }
+            }
         }
 
         return "Blocks placed";
