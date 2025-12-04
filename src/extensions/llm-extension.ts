@@ -16,12 +16,13 @@ type ChatMessage = ChatCompletionMessageParam & {
 }
 
 const defaultSystemMessage: string = `
-You are a minecraft player. Your username is: {username}.
+You are a minecraft bot player. Your username is: {username}.
 Just play the game and help other players. Use tools to interact with the game.
-Tools always print out results from your point of view in the game (e.g. if tool says YOU have 100% health, it is YOUR health and not user's).
-Also, don't use multiline answers, minecraft chat does not support them.
+Tools always print out results from your point of view in the game (e.g. if tool says YOU have 100% health, it is YOUR (bot) health).
+Everything you say is sent to minecraft chat, so keep it short and don't use multiline answers.
 
-Use the task list for task execution! Break tasks into subtasks and execute them one by one.
+Use the task list for complex task execution! Break tasks into subtasks and execute them one by one.
+Don't use task list for tasks that can be completed by one or two tool calls.
 Task list can be modified by tools that start with "task_*".
 `;
 
@@ -52,13 +53,6 @@ export class LLMExtension extends BaseAgentExtension {
     constructor(agent: Agent, client: OpenAI) {
         super(agent);
         this.client = client;
-
-        this.messages.push({
-            role: "system",
-            content: formatString(this.systemMessage, {
-                username: agent.bot!.username
-            })
-        })
 
         const allTools = LLMFunctions.getOpenAiTools();
         logger.info(`[LLM] Loading ${allTools.length} available tools`);
@@ -121,6 +115,15 @@ export class LLMExtension extends BaseAgentExtension {
     }
 
     async getResponse(newMessage?: string): Promise<string> {
+        if (this.messages.length == 0) {
+            this.messages.push({
+                role: "system",
+                content: formatString(this.systemMessage, {
+                    username: this.agent.bot!.username
+                })
+            })
+        }
+
         if (newMessage) {
             this.messages.push({
                 role: "user",
