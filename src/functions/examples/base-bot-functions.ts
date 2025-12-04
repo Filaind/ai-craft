@@ -28,11 +28,7 @@ LLMFunctions.register({
     handler: async (agent: Agent, args) => {
 
         const goal = new goals.GoalExact(new Vec3(args.x, args.y, args.z));
-        await agent.mineflayerBot!.ashfinder.gotoSmart(goal, {
-            waypointThreshold: 75, // Use waypoints for distances > 75 blocks
-            forceWaypoints: false, // Force waypoint usage
-            forceAdaptive: true, // Use smart waypoint system with failure handling
-        });
+        await agent.mineflayerBot!.ashfinder.goto(goal)
 
         return `Reached to (${args.x}, ${args.y}, ${args.z})`;
     }

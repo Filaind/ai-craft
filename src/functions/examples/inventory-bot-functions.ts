@@ -38,6 +38,11 @@ export async function discard(agent: Agent, itemName: string, num = -1) {
 export async function giveToPlayer(agent: Agent, itemType: string, entity: Entity, num = 1) {
     const mineflayerBot = agent.mineflayerBot!;
 
+    const distance = entity.position.distanceTo(mineflayerBot.entity.position);
+    if (distance > 4) {
+        return `Entity ${entity.username} is too far away to give items to (${distance} blocks).`;
+    }
+
     await mineflayerBot.lookAt(entity.position);
     if (await discard(agent, itemType, num)) {
         return `Given ${itemType} to ${entity.username}.`;

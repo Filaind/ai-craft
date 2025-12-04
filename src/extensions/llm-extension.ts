@@ -109,6 +109,29 @@ export class LLMExtension extends BaseAgentExtension {
         return this.groups.has(group);
     }
 
+    async isMessageAddressedToMe(): Promise<boolean> {
+        let messages = this.messages.filter((message) => message.role != "system" && message.role != "tool").slice(-5);
+
+        logger.debug(`[LLM] Messages to analyze: ${messages.map((message) => message.content).join('\n')}`);
+        const response = await this.client.chat.completions.create({
+            model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
+            messages: [
+                {
+                    role: "system",
+                    content: `
+                    Analyze messages and determine whether the last message could have been addressed to you. Return true if so, and false otherwise.
+                    Your username: ${this.agent.mineflayerBot!.username}
+                    `
+                },
+                ...messages
+            ],
+        });
+
+        logger.debug(`[LLM] Response: ${response.choices[0]!.message.content!}`);
+
+        return response.choices[0]!.message.content!.includes("true");
+    }
+
     async getResponse(newMessage?: string): Promise<string> {
         if (newMessage) {
             this.messages.push({
@@ -143,9 +166,13 @@ export class LLMExtension extends BaseAgentExtension {
                 messages: [
                     {
                         role: "user",
-                        content: `Your inventory: ${JSON.stringify(inventory)}
+                        content: `
+                        Your username: ${this.agent.mineflayerBot!.username}
+                        Your inventory: ${JSON.stringify(inventory)}
                         Your position: ${this.agent.mineflayerBot!.entity.position}
                         Your todo list: ${this.agent.todoList}
+
+                        Online players: ${JSON.stringify(Object.keys(this.agent.mineflayerBot!.players))}
                         `
                     },
                     ...this.messages

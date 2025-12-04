@@ -10,6 +10,8 @@ import { translateMessage } from './utils/translator';
 export class Agent {
     public mineflayerBot?: mineflayer.Bot;
     private llm: LLMExtension;
+    private messageQueue: string[] = [];
+    private msgDebounceTimer: NodeJS.Timeout | null = null;
 
 
     private static BOT_DATA_PATH: string = 'bots-data';
@@ -46,11 +48,12 @@ export class Agent {
     }
 
     async sendChatMessage(message: string) {
+        if (message == "NO ANSWER") return;
         const sanitized = message.replace(/[^a-zA-Zа-яА-Я0-9 .,!?-_:;'"()+]/g, '').trim();
         //хз
 
         const translated = await translateMessage(sanitized, 'ru');
-        this.mineflayerBot!.chat("/say %" + translated);
+        this.mineflayerBot!.chat("/say " + translated);
     }
 
     getBotDataPath() {
@@ -80,12 +83,24 @@ export class Agent {
 
         console.log('onChatMessage', username, message);
 
-
         const translated = await translateMessage(message, 'en');
-        const response = await this.llm.getResponse(`User ${username} said: ${translated}`)
 
-        this.sendChatMessage(response)
+        this.messageQueue.push(`${username} said: ${translated}`);
 
+        if (this.msgDebounceTimer) {
+            clearTimeout(this.msgDebounceTimer);
+        }
+
+        //3 секунды собираем сообщения в чате, чтобы не было лишних запросов к LLM
+        this.msgDebounceTimer = setTimeout(async () => {
+            if (this.messageQueue.length > 0) {
+                const allMessages = this.messageQueue.join('\n');
+                const response = await this.llm.getResponse(`Chat:\n${allMessages}`);
+                this.sendChatMessage(response);
+                this.messageQueue = [];
+            }
+            this.msgDebounceTimer = null;
+        }, 3000);
     }
 
 
