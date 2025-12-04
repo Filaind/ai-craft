@@ -147,7 +147,7 @@ export class LLMExtension extends BaseAgentExtension {
 
             logger.debug(`[LLM] Available tools: ${tools.map((t) => t.function.name).join(', ')}`);
 
-            let active_task = this.tasks.active();
+            let task_info = this.tasks.active_info();
 
             const response = await this.client.chat.completions.create({
                 model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
@@ -156,9 +156,10 @@ export class LLMExtension extends BaseAgentExtension {
                 messages: [
                     {
                         role: "user",
-                        content: `Your inventory: ${JSON.stringify(inventory)}
+                        content: `
+                        Your inventory: ${JSON.stringify(inventory)}
                         Your position: ${this.agent.bot!.entity.position}
-                        ${active_task ? `Your active task is:\n${active_task.markdown}` : "You have no active tasks"}
+                        ${task_info ? `Your active task is:\n${task_info}` : "You have no active tasks"}
                         `
                     },
                     ...this.messages

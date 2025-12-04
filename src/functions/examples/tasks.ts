@@ -7,6 +7,25 @@ import type { Agent } from "../../agent"
 import { fa } from "zod/locales";
 
 export interface LLMTask {
+	/**
+	 * Short, descriptive title of the task
+	 */
+	title: string,
+	/**
+	 * Detailed description of the task in markdown format
+	 */
+	markdown?: string,
+	/**
+	 * Task priority. Higher value = higher priority. Arbitrary integer value, can be negative.
+	 */
+	priority: number,
+	/**
+	 * Task completion flag 
+	 */
+	completed: boolean
+}
+
+export interface LLMTaskDescription {
 	title: string,
 	markdown?: string,
 	priority?: number,
@@ -26,13 +45,16 @@ export class LLMTaskList {
 	/**
 	 * Replaces whole task list.
 	 * @param tasks - new task list. Will be sorted by priority. Missing properties will default to: priority - 0, completed - false
+	 * @returns array of indices of inserted tasks
 	 */
-	set(tasks: LLMTask[]) {
-		this.list = tasks.map((task) => ({
+	set(tasks: LLMTaskDescription[]): number[] {
+		let new_tasks: LLMTask[] = tasks.map((task) => ({
 			priority: 0,
 			completed: false,
 			...task
-		})).sort((a, b) => a.priority - b.priority);
+		}));
+		this.list = new_tasks.sort((a, b) => a.priority - b.priority);
+		return new_tasks.map((v) => this.list.indexOf(v));
 	}
 
 	/**
@@ -43,11 +65,21 @@ export class LLMTaskList {
 	}
 
 	/**
-	 * Get active task
-	 * @returns currently active (not completed) task
+	 * Get currently active (not completed) task
+	 * @returns active task
 	 */
 	active(): LLMTask | undefined {
 		return this.list.find((v) => !v.completed)
+	}
+
+	/**
+	 * Get information about currently active task
+	 * @returns task description or title
+	 */
+	active_info(): string | undefined {
+		let active_task = this.active();
+		if (!active_task) return undefined;
+		return active_task.markdown || active_task.title;
 	}
 
 	/**
@@ -61,54 +93,51 @@ export class LLMTaskList {
 	/**
 	 * Inserts new task at the beginning of the list.
 	 * Priority of the new task is set to the highest number in the list automatically.
-	 * @param title - short task titke
-	 * @param markdown - detailed task description in markdown
-	 * no return, because new task is always at index 0
+	 * @param task - task to insert
+	 * @returns index of inserted task (-1 if priority check failed)
 	 */
-	addFront(title: string, markdown?: string) {
+	addFront(task: LLMTaskDescription) {
 		let first = this.list[0];
+		if (first!.priority > task.priority!) return -1;
 		this.list.unshift({
-			title,
-			markdown,
 			priority: (first && first.priority) || 0,
-			completed: false
+			completed: false,
+			...task
 		})
+		return 0;
 	}
 
 	/**
 	 * Inserts new task at the end of the list.
 	 * Priority of the new task is set to the lowest number in the list automatically.
-	 * @param title - short task titke
-	 * @param markdown - detailed task description in markdown
-	 * @returns index of inserted task
+	 * @param task - task to insert
+	 * @returns index of inserted task (-1 if priority check failed)
 	 */
-	addBack(title: string, markdown?: string): number {
+	addBack(task: LLMTaskDescription): number {
 		let last = this.list[this.list.length - 1];
+		if (last!.priority < task.priority!) return -1;
 		return this.list.push({
-			title,
-			markdown,
 			priority: (last && last.priority) || 0,
-			completed: false
+			completed: false,
+			...task
 		})
 	}
 
 	/**
 	 * Inserts new task in the list. Task is inserted based on provided priority.
-	 * @param title - short task titke
-	 * @param markdown - detailed task description in markdown
-	 * @param priority - task priority
+	 * @param task - task to insert
 	 * @returns index of inserted task
 	 */
-	add(task: LLMTask): number {
-		task = {
+	add(task: LLMTaskDescription): number {
+		let new_task: LLMTask = {
 			priority: 0,
 			completed: false,
 			...task
 		};
 
-		let i = this.list.findIndex((v) => v.priority! > task.priority!);
+		let i = this.list.findIndex((v) => v.priority > new_task.priority);
 		if (i < 0) i = this.list.length;
-		this.list.splice(i, 0, task)
+		this.list.splice(i, 0, new_task)
 		return i;
 	}
 
@@ -184,8 +213,8 @@ LLMFunctions.register({
 	}),
 	handler: async (agent: Agent, args) => {
 		if (args.tasks.length == 0) return "No task list provided!";
-		agent.llm.tasks.set(args.tasks);
-		return "Task list updated";
+		let indices = agent.llm.tasks.set(args.tasks);
+		return "Task list set. Task indices: " + JSON.stringify(indices);
 	}
 })
 
@@ -212,7 +241,7 @@ LLMFunctions.register({
 		markdown: z.string().optional().describe("Detailed task description in markdown")
 	}),
 	handler: async (agent: Agent, args) => {
-		agent.llm.tasks.addFront(args.title, args.markdown);
+		agent.llm.tasks.addFront(args);
 		return `Task inserted at index 0`;
 	}
 })
@@ -225,7 +254,7 @@ LLMFunctions.register({
 		markdown: z.string().optional().describe("Detailed task description in markdown")
 	}),
 	handler: async (agent: Agent, args) => {
-		let index = agent.llm.tasks.addBack(args.title, args.markdown);
+		let index = agent.llm.tasks.addBack(args);
 		return `Task inserted at index ${index}`
 	}
 })
