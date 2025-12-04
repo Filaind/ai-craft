@@ -9,7 +9,7 @@ LLMFunctions.register({
     description: "Returns level of player's hunger",
     schema: z.object({}),
     handler: async (agent: Agent, args) => {
-        let level = agent.mineflayerBot!.food;
+        let level = agent.bot!.food;
         return `Food saturation is at ${level} (${level * 5}%)`;
     }
 })
@@ -20,7 +20,7 @@ LLMFunctions.register({
     description: "Returns level of player's health",
     schema: z.object({}),
     handler: async (agent: Agent, args) => {
-        let level = agent.mineflayerBot!.health;
+        let level = agent.bot!.health;
         return `Health is at ${level} (${level * 5}%)`;
     }
 })

@@ -8,13 +8,10 @@ import * as collectblockPlugin from 'mineflayer-collectblock'
 import { translateMessage } from './utils/translator';
 
 export class Agent {
-    public mineflayerBot?: mineflayer.Bot;
-    private llm: LLMExtension;
-
+    public bot?: mineflayer.Bot;
+    public readonly llm: LLMExtension;
 
     private static BOT_DATA_PATH: string = 'bots-data';
-
-    public todoList: string = ""
 
     constructor(options: BotOptions, llmClient: OpenAI) {
         this.llm = new LLMExtension(this, llmClient);
@@ -22,27 +19,25 @@ export class Agent {
     }
 
     async start(options: BotOptions) {
-        this.mineflayerBot = mineflayer.createBot({
+        this.bot = mineflayer.createBot({
             ...options,
         })
 
-        this.mineflayerBot.loadPlugin(pathfinder.loader)
-        this.mineflayerBot.loadPlugin(pvp.plugin)
-        this.mineflayerBot.loadPlugin(collectblockPlugin.plugin)
+        this.bot.loadPlugin(pathfinder.loader)
+        this.bot.loadPlugin(pvp.plugin)
+        this.bot.loadPlugin(collectblockPlugin.plugin)
 
-
-
-        this.mineflayerBot.on('spawn', this.onSpawn.bind(this))
-        this.mineflayerBot.on('chat', this.onChatMessage.bind(this))
+        this.bot.on('spawn', this.onSpawn.bind(this))
+        this.bot.on('chat', this.onChatMessage.bind(this))
 
         // Log errors and kick reasons:
-        this.mineflayerBot.on('kicked', console.log)
-        this.mineflayerBot.on('error', console.log)
+        this.bot.on('kicked', console.log)
+        this.bot.on('error', console.log)
 
-        //this.mineflayerBot.on('game', this.onGameStateChanged.bind(this))
+        //this.bot.on('game', this.onGameStateChanged.bind(this))
 
         //@ts-ignore
-        this.mineflayerBot.on('stoppedAttacking', this.onStoppedAttacking.bind(this))
+        this.bot.on('stoppedAttacking', this.onStoppedAttacking.bind(this))
     }
 
     async sendChatMessage(message: string) {
@@ -50,36 +45,34 @@ export class Agent {
         //хз
 
         const translated = await translateMessage(sanitized, 'ru');
-        this.mineflayerBot!.chat("/say %" + translated);
+        this.bot!.chat("/say %" + translated);
     }
 
     getBotDataPath() {
-        return `${Agent.BOT_DATA_PATH}/${this.mineflayerBot!.username}`;
+        return `${Agent.BOT_DATA_PATH}/${this.bot!.username}`;
     }
 
     async onSpawn() {
         fs.mkdirSync(this.getBotDataPath(), { recursive: true });
-        await this.mineflayerBot!.waitForChunksToLoad();
+        await this.bot!.waitForChunksToLoad();
 
-        this.mineflayerBot!.ashfinder.config.parkour = true; // Allow parkour jumps
-        this.mineflayerBot!.ashfinder.config.breakBlocks = true; // Allow breaking blocks
-        this.mineflayerBot!.ashfinder.config.placeBlocks = true; // Allow placing blocks
-        this.mineflayerBot!.ashfinder.config.swimming = true; // Allow swimming
+        this.bot!.ashfinder.config.parkour = true; // Allow parkour jumps
+        this.bot!.ashfinder.config.breakBlocks = true; // Allow breaking blocks
+        this.bot!.ashfinder.config.placeBlocks = true; // Allow placing blocks
+        this.bot!.ashfinder.config.swimming = true; // Allow swimming
 
-        console.log("Bot spawned", this.mineflayerBot!.username);
-        const entity = this.mineflayerBot!.nearestEntity()
+        console.log("Bot spawned", this.bot!.username);
+        const entity = this.bot!.nearestEntity()
         if (entity) {
             console.log("Nearest entity", entity.name);
         }
     }
 
-
     async onChatMessage(username: string, message: string) {
         //Игнорируем сообщения от бота
-        if (username === this.mineflayerBot!.username || message.startsWith('%')) return
+        if (username === this.bot!.username || message.startsWith('%')) return
 
         console.log('onChatMessage', username, message);
-
 
         const translated = await translateMessage(message, 'en');
         const response = await this.llm.getResponse(`User ${username} said: ${translated}`)
@@ -87,7 +80,6 @@ export class Agent {
         this.sendChatMessage(response)
 
     }
-
 
     async onStoppedAttacking(entity: any) {
         const response = await this.llm.getResponse("Done attacking")

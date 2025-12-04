@@ -15,15 +15,15 @@ export async function discard(agent: Agent, itemName: string, num = -1) {
      * @example
      * await skills.discard(bot, "oak_log");
      **/
-    const mineflayerBot = agent.mineflayerBot!;
+    const bot = agent.bot!;
     let discarded = 0;
     while (true) {
-        let item = mineflayerBot.inventory.items().find(item => item.name === itemName);
+        let item = bot.inventory.items().find(item => item.name === itemName);
         if (!item) {
             break;
         }
         let to_discard = num === -1 ? item.count : Math.min(num - discarded, item.count);
-        await mineflayerBot.toss(item.type, null, to_discard);
+        await bot.toss(item.type, null, to_discard);
         discarded += to_discard;
         if (num !== -1 && discarded >= num) {
             break;
@@ -36,9 +36,9 @@ export async function discard(agent: Agent, itemName: string, num = -1) {
 }
 
 export async function giveToPlayer(agent: Agent, itemType: string, entity: Entity, num = 1) {
-    const mineflayerBot = agent.mineflayerBot!;
+    const bot = agent.bot!;
 
-    await mineflayerBot.lookAt(entity.position);
+    await bot.lookAt(entity.position);
     if (await discard(agent, itemType, num)) {
         return `Given ${itemType} to ${entity.username}.`;
     }
@@ -52,7 +52,7 @@ export async function giveToPlayer(agent: Agent, itemType: string, entity: Entit
 //         properties: {}
 //     },
 //     function: (args: { bot: Bot }) => {
-//         return args.bot.mineflayerBot!.inventory.items().map((item) => {
+//         return args.bot.bot!.inventory.items().map((item) => {
 //             return {
 //                 name: item.name,
 //                 count: item.count,
@@ -73,7 +73,7 @@ LLMFunctions.register({
         num: z.number().describe("The number of items to give")
     }),
     handler: async (agent: Agent, args) => {
-        let entity = agent.mineflayerBot!.entities[args.entity_id];
+        let entity = agent.bot!.entities[args.entity_id];
         if (!entity) return `Entity with ID ${args.entity_id} is not found!`;
         
         const res = await giveToPlayer(agent, args.item_type, entity, args.num);

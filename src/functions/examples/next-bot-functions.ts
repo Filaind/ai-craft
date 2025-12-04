@@ -10,7 +10,7 @@ import { Vec3 } from 'vec3';
 import z from "zod";
 
 export function getNearestBlocksWhere(agent: Agent, predicate: (block: Block) => boolean, distance = 8, count = 10000) {
-    const mineflayerBot = agent.mineflayerBot!;
+    const bot = agent.bot!;
 
     /**
      * Get a list of the nearest blocks that satisfy the given predicate.
@@ -22,13 +22,13 @@ export function getNearestBlocksWhere(agent: Agent, predicate: (block: Block) =>
      * @example
      * let waterBlocks = world.getNearestBlocksWhere(bot, block => block.name === 'water', 16, 10);
      **/
-    let positions = mineflayerBot.findBlocks({ matching: predicate, maxDistance: distance, count: count });
-    let blocks = positions.map(position => mineflayerBot.blockAt(position));
+    let positions = bot.findBlocks({ matching: predicate, maxDistance: distance, count: count });
+    let blocks = positions.map(position => bot.blockAt(position));
     return blocks;
 }
 
 export async function collectBlock(agent: Agent, blockType: string, num = 1, exclude: Position[] | null = null) {
-    const mineflayerBot = agent.mineflayerBot!;
+    const bot = agent.bot!;
     /**
      * Collect one of the given block type.
      * @param {MinecraftBot} bot, reference to the minecraft bot.
@@ -55,7 +55,7 @@ export async function collectBlock(agent: Agent, blockType: string, num = 1, exc
 
     let collected = 0;
 
-    const movements = new Movements(agent.mineflayerBot!);
+    const movements = new Movements(agent.bot!);
     movements.dontMineUnderFallingBlock = false;
     movements.dontCreateFlow = true;
 
@@ -88,12 +88,12 @@ export async function collectBlock(agent: Agent, blockType: string, num = 1, exc
             break;
         }
         const block = blocks[0];
-        const itemId = mineflayerBot.heldItem ? mineflayerBot.heldItem.type : null
+        const itemId = bot.heldItem ? bot.heldItem.type : null
         if (!block?.canHarvest(itemId)) {
             return false;
         }
         try {
-            await mineflayerBot.collectBlock.collect(block!);
+            await bot.collectBlock.collect(block!);
         }
         catch (err) {
         }
@@ -132,7 +132,7 @@ LLMFunctions.register({
     handler: async (agent: Agent, args) => {
         for (const [x, y, z, block_type] of args.blocks) {
             const setblockCommand = `/setblock ${x} ${y} ${z} ${block_type}`;
-            agent.mineflayerBot!.chat(setblockCommand);
+            agent.bot!.chat(setblockCommand);
         }
 
         return "Blocks placed";
@@ -172,7 +172,7 @@ LLMFunctions.register({
     handler: async (agent: Agent, args) => {
         console.log("Executing code: " + args.code);
 
-        const mineflayerBot = agent.mineflayerBot;
+        const bot = agent.bot;
 
         const func = makeCompartment({
             require,
@@ -184,7 +184,7 @@ LLMFunctions.register({
             ${args.code}
         })`);
 
-        await func(mineflayerBot!);
+        await func(bot!);
 
         return 'done'
     }

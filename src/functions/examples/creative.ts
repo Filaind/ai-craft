@@ -25,8 +25,8 @@ LLMFunctions.register({
             return `Item ID ${args.item_id} is invalid!`;
         }
         const new_item = new Item(item.id, args.amount);
-        const inventorySlot = agent.mineflayerBot!.inventory.hotbarStart + agent.mineflayerBot!.quickBarSlot;
-        await agent.mineflayerBot!.creative.setInventorySlot(inventorySlot, new_item)
+        const inventorySlot = agent.bot!.inventory.hotbarStart + agent.bot!.quickBarSlot;
+        await agent.bot!.creative.setInventorySlot(inventorySlot, new_item)
         return {
             message: `${item?.displayName} is now in your hand`
         }
@@ -47,7 +47,7 @@ LLMFunctions.register({
         ).describe("List of block coordinates to break").min(1).max(64)
     }),
     handler: async (agent: Agent, args) => {
-        const mbot = agent.mineflayerBot!;
+        const mbot = agent.bot!;
         if (args.blocks.length == 0) {
             return "No block coordinates specified!";
         }

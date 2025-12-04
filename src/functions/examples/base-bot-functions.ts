@@ -1,15 +1,17 @@
-import type { Agent } from "../../agent"
-import { Entity } from "prismarine-entity"
-import { LLMFunctions } from "../llm-functions"
-import { z } from "zod";
-import { goals } from "@miner-org/mineflayer-baritone"
+
 import { Vec3 } from 'vec3';
+import { z } from "zod";
+import { Entity } from "prismarine-entity"
+import { goals } from "@miner-org/mineflayer-baritone"
+
+import { LLMFunctions } from "../llm-functions"
+import type { Agent } from "../../agent"
 
 export function getNearbyEntities(agent: Agent, maxDistance = 16) {
     let entity_distances: { entity_id: string, entity: Entity, distance: number }[] = [];
-    for (const [entity_id, entity] of Object.entries(agent.mineflayerBot!.entities)) {
-        if (entity.username == agent.mineflayerBot!.username) continue;
-        const distance = entity.position.distanceTo(agent.mineflayerBot!.entity.position);
+    for (const [entity_id, entity] of Object.entries(agent.bot!.entities)) {
+        if (entity.username == agent.bot!.username) continue;
+        const distance = entity.position.distanceTo(agent.bot!.entity.position);
         if (distance > maxDistance) continue;
         entity_distances.push({ entity_id, entity: entity as Entity, distance: distance });
     }
@@ -26,9 +28,8 @@ LLMFunctions.register({
         z: z.number()
     }),
     handler: async (agent: Agent, args) => {
-
         const goal = new goals.GoalExact(new Vec3(args.x, args.y, args.z));
-        await agent.mineflayerBot!.ashfinder.gotoSmart(goal, {
+        await agent.bot!.ashfinder.gotoSmart(goal, {
             waypointThreshold: 75, // Use waypoints for distances > 75 blocks
             forceWaypoints: false, // Force waypoint usage
             forceAdaptive: true, // Use smart waypoint system with failure handling
@@ -45,7 +46,7 @@ LLMFunctions.register({
         entity_id: z.string().describe("Id of the entity to walk to"),
     }),
     handler: async (agent: Agent, args) => {
-        let mbot = agent.mineflayerBot!;
+        let mbot = agent.bot!;
 
         let entity = mbot.entities[args.entity_id];
         if (!entity) return `Entity with ID ${args.entity_id} is not found!`;
@@ -53,7 +54,7 @@ LLMFunctions.register({
         let pos = entity.position;
         const goal = new goals.GoalExact(new Vec3(pos.x, pos.y, pos.z));
         
-        await agent.mineflayerBot!.ashfinder.gotoSmart(goal, {
+        await agent.bot!.ashfinder.gotoSmart(goal, {
             waypointThreshold: 75, // Use waypoints for distances > 75 blocks
             forceWaypoints: false, // Force waypoint usage
             forceAdaptive: true, // Use smart waypoint system with failure handling
@@ -70,10 +71,10 @@ LLMFunctions.register({
         entity_id: z.string().describe("The id of the entity to attack")
     }),
     handler: async (agent: Agent, args) => {
-        let entity = agent.mineflayerBot!.entities[args.entity_id];
+        let entity = agent.bot!.entities[args.entity_id];
         if (!entity) return `Entity with ID ${args.entity_id} is not found!`
 
-        agent.mineflayerBot!.pvp.attack(entity)
+        agent.bot!.pvp.attack(entity)
         return {
             message: `Attacking entity ${args.entity_id}`,
             stop_calling: true
@@ -98,19 +99,3 @@ LLMFunctions.register({
         }
     }
 })
-
-LLMFunctions.register({
-    name: "set_todo_list",
-    description: "Set the todo list",
-    schema: z.object({
-        todo_list: z.string().describe("Write detailed description of the todo list. Use markdown format")
-    }),
-    handler: async (agent: Agent, args) => {
-        agent.todoList = args.todo_list
-
-        return {
-            message: "Todo list set"
-        }
-    }
-})
-

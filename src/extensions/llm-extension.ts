@@ -1,35 +1,44 @@
+
+import fs from 'fs';
 import OpenAI from "openai";
-import { type LLMFunctionTool, type LLMFunctionGroup, type LLMFunctionGroups, type LLMFunctionResult, LLMFunctions } from "../functions/llm-functions";
 import type { ChatCompletionMessageParam } from "openai/resources";
+import type { GameMode } from "mineflayer"
+
 import { BaseAgentExtension } from "./base-agent-extension";
 import type { Agent } from "../agent";
-import type { GameMode } from "mineflayer"
-import fs from 'fs';
 import { logger } from "../../index";
 
-
+import { type LLMFunctionTool, type LLMFunctionGroup, type LLMFunctionGroups, type LLMFunctionResult, LLMFunctions } from "../functions/llm-functions";
+import { LLMTaskList, type LLMTask } from '../functions/examples/tasks';
 
 type ChatMessage = ChatCompletionMessageParam & {
     tool_name?: string;
 }
 
 const defaultSystemMessage: string = `
-You are a minecraft player.
-Just play the game and help other players.
-Use tools to interact with the game.
+You are a minecraft player. Your username is: {username}.
+Just play the game and help other players. Use tools to interact with the game.
 Tools always print out results from your point of view in the game (e.g. if tool says YOU have 100% health, it is YOUR health and not user's).
 Also, don't use multiline answers, minecraft chat does not support them.
-Parallel tool calling is not supported!!!
 
-For task execution, use the TODO LIST. Break tasks into subtasks and execute them one by one.
-Modify the TODO LIST through the set_todo_list function.
+Use the task list for task execution! Break tasks into subtasks and execute them one by one.
+Task list can be modified by tools that start with "task_*".
 `;
+
+
+function formatString(template: string, values: Record<string, any>): string {
+    return template.replace(/\{(\w+)\}/g, (_, key) => 
+        values[key] !== undefined ? values[key] : `{${key}}`
+    );
+}
 
 export class LLMExtension extends BaseAgentExtension {
     private client: OpenAI;
     private messages: ChatMessage[] = [];
     private functionCallHistory: string[] = [];
-    private groups: Set<LLMFunctionGroup> = new Set();
+
+    public readonly groups: Set<LLMFunctionGroup> = new Set();
+    public readonly tasks: LLMTaskList = new LLMTaskList();
 
     private gameModeTools: Record<GameMode, LLMFunctionTool[]> = {
         "survival": [],
@@ -46,7 +55,9 @@ export class LLMExtension extends BaseAgentExtension {
 
         this.messages.push({
             role: "system",
-            content: this.systemMessage
+            content: formatString(this.systemMessage, {
+                username: agent.bot!.username
+            })
         })
 
         const allTools = LLMFunctions.getOpenAiTools();
@@ -117,7 +128,7 @@ export class LLMExtension extends BaseAgentExtension {
             })
         }
 
-        const inventory = this.agent.mineflayerBot!.inventory.items().map((item) => {
+        const inventory = this.agent.bot!.inventory.items().map((item) => {
             return {
                 name: item.name,
                 count: item.count,
@@ -128,13 +139,15 @@ export class LLMExtension extends BaseAgentExtension {
         logger.info('[LLM] Starting request');
         const startTime = Date.now();
         try {
-            let tools = this.gameModeTools[this.agent.mineflayerBot!.game.gameMode]
+            let tools = this.gameModeTools[this.agent.bot!.game.gameMode]
             tools = tools.filter((t) => this.canCall(t.group)).map((t) => ({
                 type: "function",
                 function: t.function
             }));
 
             logger.debug(`[LLM] Available tools: ${tools.map((t) => t.function.name).join(', ')}`);
+
+            let active_task = this.tasks.active();
 
             const response = await this.client.chat.completions.create({
                 model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
@@ -144,8 +157,8 @@ export class LLMExtension extends BaseAgentExtension {
                     {
                         role: "user",
                         content: `Your inventory: ${JSON.stringify(inventory)}
-                        Your position: ${this.agent.mineflayerBot!.entity.position}
-                        Your todo list: ${this.agent.todoList}
+                        Your position: ${this.agent.bot!.entity.position}
+                        ${active_task ? `Your active task is:\n${active_task.markdown}` : "You have no active tasks"}
                         `
                     },
                     ...this.messages
@@ -187,7 +200,7 @@ export class LLMExtension extends BaseAgentExtension {
 
                         let function_arguments = JSON.parse(tool_call.function.arguments)
 
-                        // this.bot.mineflayerBot!.chat("Calling function: " + function_name + " with arguments: " + tool_call.function.arguments)
+                        // this.bot.bot!.chat("Calling function: " + function_name + " with arguments: " + tool_call.function.arguments)
 
                         const ret = await LLMFunctions.invokeFunction(function_name, this.agent, function_arguments)
                         const result: LLMFunctionResult = (typeof (ret) == "string") ? { message: ret } : ret;
