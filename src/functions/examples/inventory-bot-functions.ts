@@ -45,6 +45,14 @@ export async function discard(agent: Agent, itemName: string, num = -1): Promise
 export async function giveToPlayer(agent: Agent, itemType: string, entity: Entity, num = 1): Promise<LLMFunctionResult> {
     const bot = agent.bot!;
 
+    const distance = entity.position.distanceTo(agent.bot!.entity.position);
+    if (distance > 4) {
+        return {
+            result: "error",
+            message: `Entity ${entity.username} is too far away to give items to (${distance} blocks).`
+        }
+    }
+
     await bot.lookAt(entity.position);
     if ((await discard(agent, itemType, num)).result == "success") {
         return {

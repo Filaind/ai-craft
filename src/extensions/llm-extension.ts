@@ -118,7 +118,18 @@ export class LLMExtension extends BaseAgentExtension {
         return this.groups.has(group);
     }
 
-    private pushChatMessage(message: string, username?: string) {
+    public pushSystemPrompt() {
+        if (this.messages.length = 0) {
+            this.messages.push({
+                role: "system",
+                content: formatString(this.systemMessage, {
+                    username: this.agent.bot!.username
+                })
+            })
+        }
+    }
+
+    public pushChatMessage(message: string, username?: string) {
         let llmMessage: OpenAI.ChatCompletionUserMessageParam = {
             role: "user",
             content: message
@@ -138,16 +149,30 @@ export class LLMExtension extends BaseAgentExtension {
         })
     }
 
-    async getResponse(newMessage?: string, username?: string): Promise<string> {
-        if (this.messages.length == 0) {
-            this.messages.push({
-                role: "system",
-                content: formatString(this.systemMessage, {
-                    username: this.agent.bot!.username
-                })
-            })
-        }
+    async isMessageAddressedToMe(): Promise<boolean> {
+        let messages = this.messages.filter((message) => message.role != "system" && message.role != "tool").slice(-5);
 
+        logger.debug(`[LLM] Messages to analyze: ${messages.map((message) => message.content).join('\n')}`);
+        const response = await this.client.chat.completions.create({
+            model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
+            messages: [
+                {
+                    role: "system",
+                    content: `
+                    Analyze messages and determine whether the last message could have been addressed to you. Return true if so, and false otherwise.
+                    Your username: ${this.agent.bot!.username}
+                    `
+                },
+                ...messages
+            ],
+        });
+
+        logger.debug(`[LLM] Response: ${response.choices[0]!.message.content!}`);
+
+        return response.choices[0]!.message.content!.includes("true");
+    }
+
+    async getResponse(newMessage?: string, username?: string): Promise<string> {
         if (newMessage) {
             this.pushChatMessage(newMessage, username);
         }

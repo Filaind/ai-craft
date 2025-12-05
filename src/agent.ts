@@ -9,7 +9,9 @@ import { translateMessage } from './utils/translator';
 
 export class Agent {
     public bot?: mineflayer.Bot;
-    public readonly llm: LLMExtension;
+    private llm: LLMExtension;
+    private messagePushed: boolean = false;
+    private msgDebounceTimer: NodeJS.Timeout | null = null;
 
     private static BOT_DATA_PATH: string = 'bots-data';
 
@@ -41,6 +43,7 @@ export class Agent {
     }
 
     async sendChatMessage(message: string) {
+        if (message == "NO ANSWER") return;
         const sanitized = message.replace(/[^a-zA-Zа-яА-Я0-9 .,!?-_:;'"()+]/g, '').trim();
         //хз
 
@@ -74,15 +77,29 @@ export class Agent {
 
         console.log('onChatMessage', username, message);
 
-        //const translated = await translateMessage(message, 'en');
-        const response = await this.llm.getResponse(message, username)
+        const translated = await translateMessage(message, 'en');
+        this.llm.pushChatMessage(translated, username);
+        this.messagePushed = true;
 
-        this.sendChatMessage(response)
+        if (this.msgDebounceTimer) {
+            clearTimeout(this.msgDebounceTimer);
+        }
 
+        //3 секунды собираем сообщения в чате, чтобы не было лишних запросов к LLM
+        this.msgDebounceTimer = setTimeout(async () => {
+            if (this.messagePushed) {
+                this.messagePushed = false;
+                
+                const response = await this.llm.getResponse();
+                this.sendChatMessage(response);
+            }
+            this.msgDebounceTimer = null;
+        }, 3000);
     }
 
     async onStoppedAttacking(entity: any) {
-        const response = await this.llm.getResponse("Done attacking")
+        //"Done attacking"
+        const response = await this.llm.getResponse()
         this.sendChatMessage(response)
     }
 }
