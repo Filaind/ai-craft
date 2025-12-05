@@ -12,6 +12,7 @@ import { type LLMFunctionTool, type LLMFunctionGroup, type LLMFunctionGroups, ty
 import { LLMTaskList, type LLMTask } from '../functions/examples/tasks';
 import { sleep } from 'bun';
 import { Content } from 'openai/resources/containers/files.mjs';
+import { property } from 'zod';
 
 type ChatMessage = ChatCompletionMessageParam & {
     tool_name?: string;
@@ -28,6 +29,25 @@ Don't use task list for tasks that can be completed by only one tool call.
 Task list can be modified by tools that start with "task_*".
 `;
 
+const isLastMessageForMeTool: OpenAI.ChatCompletionFunctionTool = {
+    type: "function",
+    function: {
+        name: "last_message_is_for_assistant_or_not",
+        description: "Analyse the message history and call this function to notify the application whether the last message was addressed to the assistant or not",
+        parameters: {
+            type: "object", // use "boolean"?
+            properties: {
+                is_for_assistant: {
+                    type: "boolean",
+                    description: "true if last message was addressed to assistant, otherwise false"
+                }
+            },
+            required: ["is_for_assistant"],
+            additionalProperties: false
+        },
+        strict: true
+    }
+}
 
 function formatString(template: string, values: Record<string, any>): string {
     return template.replace(/\{(\w+)\}/g, (_, key) => 
@@ -155,21 +175,34 @@ export class LLMExtension extends BaseAgentExtension {
         logger.debug(`[LLM] Messages to analyze: ${messages.map((message) => message.content).join('\n')}`);
         const response = await this.client.chat.completions.create({
             model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
-            messages: [
-                {
-                    role: "system",
-                    content: `
-                    Analyze messages and determine whether the last message could have been addressed to you. Return true if so, and false otherwise.
-                    Your username: ${this.agent.bot!.username}
-                    `
-                },
-                ...messages
-            ],
+            messages: messages,
+
+            // force model to call isLastMessageForMeTool 
+            tools: [ isLastMessageForMeTool ],
+            tool_choice: { type: "function", function: { name: isLastMessageForMeTool.function.name } },
+            //tool_choice: "required"
         });
-
-        logger.debug(`[LLM] Response: ${response.choices[0]!.message.content!}`);
-
-        return response.choices[0]!.message.content!.includes("true");
+        const message = response.choices[0]?.message;
+        if (message) {
+            if (message.tool_calls && message.tool_calls.length > 0) {
+                let tool_call = message.tool_calls[0]!;
+                if (tool_call.type == "function" && tool_call.function.name == isLastMessageForMeTool.function.name) {
+                    try {
+                        let args = JSON.parse(tool_call.function.arguments);
+                        return args["is_for_assistant"] ?? true;
+                    } catch (e) {
+                        logger.warn(`[LLM] Failed to parse JSON: ${tool_call.function.arguments}`)
+                    }
+                } else {
+                    logger.warn(`[LLM] Model called invalid tool: ${tool_call}`)
+                }
+            } else {
+                logger.warn(`[LLM] Tool ${isLastMessageForMeTool.function.name} is not used`)
+            }
+            // fallback to content
+            return message.content!.includes("true");
+        }
+        return false;
     }
 
     async getResponse(newMessage?: string, username?: string): Promise<string> {
