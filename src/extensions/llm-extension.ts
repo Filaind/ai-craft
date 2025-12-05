@@ -119,7 +119,7 @@ export class LLMExtension extends BaseAgentExtension {
     }
 
     public pushSystemPrompt() {
-        if (this.messages.length = 0) {
+        if (this.messages.length == 0) {
             this.messages.push({
                 role: "system",
                 content: formatString(this.systemMessage, {
