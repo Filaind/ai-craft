@@ -205,17 +205,6 @@ export class LLMExtension extends BaseAgentExtension {
         return false;
     }
 
-    async generateSimple(messages: OpenAI.ChatCompletionMessageParam[]): Promise<OpenAI.ChatCompletion> {
-        return await this.client.chat.completions.create({
-            model: this.model,
-            //tool_choice: "none",
-            //temperature: this.temperature,
-            messages: messages,
-            parallel_tool_calls: false,
-            reasoning_effort: "medium"
-        });
-    }
-
     async getResponse(): Promise<string> {
         logger.info('[LLM] Starting request');
         const startTime = Date.now();

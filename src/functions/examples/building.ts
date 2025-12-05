@@ -8,6 +8,9 @@ import { LLMFunctions } from "../llm-functions"
 import type { Agent } from "../../agent"
 import type { ChatCompletion } from "openai/resources";
 
+import data_loader from "minecraft-data";
+const Data = data_loader("1.21.1");
+
 interface MinecraftStructure {
     size: Vec3;
     structure: string[][][];
@@ -87,7 +90,11 @@ function parseStructure(structure: string): MinecraftStructure | string {
                 }
                 z = new_z;
                 for (let x = 0; x < (args.length - 2); x++) {
-                    ret.structure[y]![z]![x] = args[x + 2]!;
+                    let block_id = args[x + 2]!;
+                    if (!Data.itemsByName[block_id]) {
+                        return `block_id '${block_id}' is invalid!`;
+                    }
+                    ret.structure[y]![z]![x] = block_id;
                 }
                 break;
             case 'e':
@@ -106,7 +113,12 @@ async function generateStructure(agent: Agent, description: string): Promise<Min
         content: structurePromptTemplate.replace("{description}", description)
     }]
     for (let attempt = 0; attempt < 3; attempt++) {
-        let response = await agent.llm.generateSimple(messages)
+        let response = await agent.client.chat.completions.create({
+            model: process.env.LLM_BUILDING_MODEL || process.env.LLM_MODEL || "openai/gpt-oss-20b",
+            messages: messages,
+            reasoning_effort: "low"
+        });
+
         let message = response.choices[0]?.message;
         if (message && message.content) {
             messages.push({
@@ -117,6 +129,7 @@ async function generateStructure(agent: Agent, description: string): Promise<Min
                 let ret = parseStructure(message.content);
                 console.log(message.content);
                 if (typeof(ret) === "string") {
+                    console.warn(`[Building] ${ret}`)
                     messages.push({
                         role: "user",
                         content: ret
@@ -125,6 +138,7 @@ async function generateStructure(agent: Agent, description: string): Promise<Min
                     return ret;
                 }
             } catch (e) {
+                console.error(e);
                 messages.push({
                     role: "user",
                     content: JSON.stringify(e)

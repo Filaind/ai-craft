@@ -10,6 +10,7 @@ import { translateMessage } from './utils/translator';
 export class Agent {
     public bot?: mineflayer.Bot;
     public readonly llm: LLMExtension;
+    public readonly client: OpenAI;
 
     private messagePushed: boolean = false;
     private msgDebounceTimer: NodeJS.Timeout | null = null;
@@ -18,6 +19,7 @@ export class Agent {
 
     constructor(options: BotOptions, llmClient: OpenAI) {
         this.llm = new LLMExtension(this, llmClient);
+        this.client = llmClient;
         this.start(options)
     }
 
