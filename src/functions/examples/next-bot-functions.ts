@@ -113,7 +113,7 @@ LLMFunctions.register({
     }),
     handler: async (agent: Agent, args) => {
         const res = await collectBlock(agent, args.block_type, args.num);
-        return "Collected " + args.block_type + " blocks";
+        return { message: "Collected " + args.block_type + " blocks" };
     }
 })
 
@@ -146,17 +146,17 @@ LLMFunctions.register({
         for (let z = 0; z < args.size.z; z++) {
             let layer_z = args.structure[z];
             if (!layer_z) {
-                return `Error: missing Z layer ${z}`;
+                return `Missing Z layer ${z}`;
             }
             for (let y = 0; y < args.size.y; y++) {
                 let layer_y = layer_z[y]
                 if (!layer_y) {
-                    return `Error: missing Y layer ${y}`;
+                    return `Missing Y layer ${y}`;
                 }
                 for (let x = 0; x < args.size.x; x++) {
                     let layer_x = layer_y[x]
                     if (layer_x === undefined) {
-                        return `Error: missing X layer ${x}`;
+                        return `Missing X layer ${x}`;
                     }
                     if (!layer_x || layer_x == "") {
                         layer_x = "air";
@@ -167,7 +167,7 @@ LLMFunctions.register({
             }
         }
 
-        return "Blocks placed";
+        return { message: "Blocks placed" };
     }
 })
 
@@ -218,6 +218,6 @@ LLMFunctions.register({
 
         await func(bot!);
 
-        return 'done'
+        return { message: 'done' }
     }
 })  

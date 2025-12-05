@@ -16,8 +16,9 @@ export type LLMFunctionGroup = "mining" | "fighting" | "unsafe"
 export type LLMFunctionGroups = LLMFunctionGroup | LLMFunctionGroup[]
 
 export interface LLMFunctionResult {
-    message: any
-    stop_calling?: boolean
+    result?: "success" | "error";
+    message: any;
+    stop_calling?: boolean;
 }
 
 /**
@@ -137,19 +138,36 @@ export class LLMFunctions {
      * @param args arguments to pass function
      * @returns error text or function result
      */
-    public static invokeFunction(name: string, agent: Agent, args: { [key: string]: any }) {
+    public static async invokeFunction(name: string, agent: Agent, args: { [key: string]: any }): Promise<LLMFunctionResult> {
         const info = this.llmFunctions.filter((v) => v.name == name)[0];
         if (info == undefined) {
-            return `Function '${name}' is not found!`
+            return {
+                result: "error",
+                message: `Function '${name}' is not found!`
+            }
         }
 
-        // Validate arguments against the function's schema
         try {
+            // Validate arguments against the function's schema
             info.schema.parse(args);
-        } catch (error) {
-            return `Invalid arguments: ${error}`;
+            // Call function
+            let ret = await info.handler(agent, args);
+            if (typeof(ret) === "string") {
+                // string is returned, treat as error
+                let result: LLMFunctionResult = {
+                    result: "error",
+                    message: ret
+                }
+                return result;
+            }
+            // If result is not specified, treat as success
+            if (!ret.result) ret.result = "success";
+            return ret;
+        } catch (e) {
+            return {
+                result: "error",
+                message: e
+            }
         }
-
-        return info.handler(agent, args);
     }
 }

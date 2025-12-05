@@ -1,11 +1,11 @@
 import type { Agent } from "../../agent";
-import { LLMFunctions } from "../llm-functions";
+import { LLMFunctions, type LLMFunctionResult } from "../llm-functions";
 import { getNearbyEntities } from "./base-bot-functions";
 import type { Entity } from "prismarine-entity";
 
 import z from "zod";
 
-export async function discard(agent: Agent, itemName: string, num = -1) {
+export async function discard(agent: Agent, itemName: string, num = -1): Promise<LLMFunctionResult> {
     /**
      * Discard the given item.
      * @param {MinecraftBot} bot, reference to the minecraft bot.
@@ -30,19 +30,33 @@ export async function discard(agent: Agent, itemName: string, num = -1) {
         }
     }
     if (discarded === 0) {
-        return `You do not have any ${itemName} to discard.`;
+        return {
+            result: "error",
+            message: `You do not have any ${itemName} to discard.`
+        };
+    } else {
+        return {
+            result: "success",
+            message: `Discarded ${discarded} ${itemName}.`
+        };
     }
-    return `Discarded ${discarded} ${itemName}.`;
 }
 
-export async function giveToPlayer(agent: Agent, itemType: string, entity: Entity, num = 1) {
+export async function giveToPlayer(agent: Agent, itemType: string, entity: Entity, num = 1): Promise<LLMFunctionResult> {
     const bot = agent.bot!;
 
     await bot.lookAt(entity.position);
-    if (await discard(agent, itemType, num)) {
-        return `Given ${itemType} to ${entity.username}.`;
+    if ((await discard(agent, itemType, num)).result == "success") {
+        return {
+            result: "success",
+            message: `Given ${itemType} to ${entity.username}.`
+        };
+    } else {
+        return {
+            result: "error",
+            message: `Failed to give ${itemType} to ${entity.username}, it was never received.`
+        };
     }
-    return `Failed to give ${itemType} to ${entity.username}, it was never received.`;
 }
 
 LLMFunctions.register({
@@ -68,11 +82,6 @@ LLMFunctions.register({
         let entity = agent.bot!.entities[args.entity_id];
         if (!entity) return `Entity with ID ${args.entity_id} is not found!`;
         
-        const res = await giveToPlayer(agent, args.item_type, entity, args.num);
-        console.log(res)
-        return {
-            message: res,
-            //stop_calling: true
-        }
+        return await giveToPlayer(agent, args.item_type, entity, args.num);
     }
 })  

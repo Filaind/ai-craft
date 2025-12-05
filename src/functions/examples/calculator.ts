@@ -168,7 +168,6 @@ Available modules: Math, Date, console, Vec3.
     })`);
 
     const result = await func();
-
-    return "Function result: " + result;
+    return { message: result };
   }
 })  

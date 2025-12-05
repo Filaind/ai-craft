@@ -11,6 +11,7 @@ import { logger } from "../../index";
 import { type LLMFunctionTool, type LLMFunctionGroup, type LLMFunctionGroups, type LLMFunctionResult, LLMFunctions } from "../functions/llm-functions";
 import { LLMTaskList, type LLMTask } from '../functions/examples/tasks';
 import { sleep } from 'bun';
+import { Content } from 'openai/resources/containers/files.mjs';
 
 type ChatMessage = ChatCompletionMessageParam & {
     tool_name?: string;
@@ -22,8 +23,8 @@ Just play the game and help other players. Use tools to interact with the game.
 Tools always print out results from your point of view in the game (e.g. if tool says YOU have 100% health, it is YOUR (bot) health).
 Everything you say is sent to minecraft chat, so keep it short and don't use multiline answers.
 
-Use the task list for complex task execution! Break tasks into subtasks and execute them one by one.
-Don't use task list for tasks that can be completed by one or two tool calls.
+Use the task list for complex task execution (like building a house or keeping a farm running)! Break tasks into subtasks and execute them one by one.
+Don't use task list for tasks that can be completed by only one tool call.
 Task list can be modified by tools that start with "task_*".
 `;
 
@@ -39,9 +40,6 @@ export class LLMExtension extends BaseAgentExtension {
     private messages: ChatMessage[] = [];
     private functionCallHistory: string[] = [];
 
-    public readonly groups: Set<LLMFunctionGroup> = new Set();
-    public readonly tasks: LLMTaskList = new LLMTaskList();
-
     private gameModeTools: Record<GameMode, LLMFunctionTool[]> = {
         "survival": [],
         "creative": [],
@@ -49,7 +47,12 @@ export class LLMExtension extends BaseAgentExtension {
         "spectator": []
     }
 
+    public model: string = process.env.LLM_MODEL || "openai/gpt-oss-20b";
+    public temperature: number = parseFloat(process.env.LLM_TEMPERATURE || "1.0");
     public systemMessage: string = defaultSystemMessage;
+
+    public readonly groups: Set<LLMFunctionGroup> = new Set();
+    public readonly tasks: LLMTaskList = new LLMTaskList();
 
     constructor(agent: Agent, client: OpenAI) {
         super(agent);
@@ -115,7 +118,27 @@ export class LLMExtension extends BaseAgentExtension {
         return this.groups.has(group);
     }
 
-    async getResponse(newMessage?: string): Promise<string> {
+    private pushChatMessage(message: string, username?: string) {
+        let llmMessage: OpenAI.ChatCompletionUserMessageParam = {
+            role: "user",
+            content: message
+        }
+        if (username) llmMessage.name = username;
+        return this.messages.push(llmMessage);
+    }
+
+    private pushBotInfo() {
+        let task_info = this.tasks.activeInfo();
+        this.messages.push({
+            role: "developer",
+            content: `
+            Your position: ${this.agent.bot!.entity.position}
+            ${task_info ? `Your active task is:\n${task_info}` : "You have no active tasks"}
+            `
+        })
+    }
+
+    async getResponse(newMessage?: string, username?: string): Promise<string> {
         if (this.messages.length == 0) {
             this.messages.push({
                 role: "system",
@@ -126,21 +149,8 @@ export class LLMExtension extends BaseAgentExtension {
         }
 
         if (newMessage) {
-            this.messages.push({
-                role: "user",
-                content: newMessage
-            })
+            this.pushChatMessage(newMessage, username);
         }
-
-        /*
-        const inventory = this.agent.bot!.inventory.items().map((item) => {
-            return {
-                name: item.name,
-                count: item.count,
-                type: item.type
-            }
-        })
-        */
 
         logger.info('[LLM] Starting request');
         const startTime = Date.now();
@@ -153,24 +163,14 @@ export class LLMExtension extends BaseAgentExtension {
 
             logger.debug(`[LLM] Available tools: ${tools.map((t) => t.function.name).join(', ')}`);
 
-            let task_info = this.tasks.activeInfo();
-
             while (true) {
-                //await sleep(5); // 'rate limiter'
-
-                this.messages.push({
-                    role: "developer",
-                    content: `
-                    Your position: ${this.agent.bot!.entity.position}
-                    ${task_info ? `Your active task is:\n${task_info}` : "You have no active tasks"}
-                    `
-                })
+                this.pushBotInfo();
 
                 const response = await this.client.chat.completions.create({
-                    model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
+                    model: this.model,
                     tool_choice: this.tasks.active() ? "required" : "auto",
                     tools: tools,
-                    temperature: parseFloat(process.env.LLM_TEMPERATURE || "1.0"),
+                    temperature: this.temperature,
                     messages: this.messages,
                     parallel_tool_calls: false
                 });
@@ -205,15 +205,8 @@ export class LLMExtension extends BaseAgentExtension {
 
                             // this.bot.bot!.chat("Calling function: " + function_name + " with arguments: " + tool_call.function.arguments)
 
-                            const promise = LLMFunctions.invokeFunction(function_name, this.agent, function_arguments);
-                            /*if (typeof(promise) === "string") {
-                                logger.warn(`[Tool call] Failed to call function ${function_name}. Error: ${promise}`)
-                                continue;
-                            }*/
-
-                            const ret = await promise;
-                            const result: LLMFunctionResult = (typeof (ret) == "string") ? { message: ret } : ret;
-                            logger.debug({ result }, `[Tool call] Result: `);
+                            const ret = await LLMFunctions.invokeFunction(function_name, this.agent, function_arguments);
+                            logger.debug({ ret }, `[Tool call] Result: `);
 
                             this.messages.push({
                                 role: "assistant",
@@ -223,7 +216,11 @@ export class LLMExtension extends BaseAgentExtension {
                                 role: "tool",
                                 tool_call_id: tool_call.id,
                                 tool_name: function_name,
-                                content: JSON.stringify(result.message)
+                                content: JSON.stringify({
+                                    result: ret.result,
+                                    message: ret.message
+                                    // remove "stop_calling"
+                                })
                             })
                             choice.message.content = ""; //костыль, что бы убрать сообщение из следующих инструментов
 
@@ -237,9 +234,9 @@ export class LLMExtension extends BaseAgentExtension {
                             this.saveMemory();
 
                             //Костыль для остановки вызова функций. Например если боту надо сначала дойти до цели, то мы останавливаем вызов функций и возвращаем сообщение.
-                            if (result.stop_calling) {
+                            if (ret.stop_calling) {
                                 logger.warn(`[Tool call] Stopping function calls due to stop_calling flag from ${function_name}`)
-                                return result.message
+                                return ret.message
                             }
                         }
                     }

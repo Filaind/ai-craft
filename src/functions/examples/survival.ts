@@ -10,7 +10,7 @@ LLMFunctions.register({
     schema: z.object({}),
     handler: async (agent: Agent, args) => {
         let level = agent.bot!.food;
-        return `Food saturation is at ${level} (${level * 5}%)`;
+        return { message: `Food saturation is at ${level} (${level * 5}%)` };
     }
 })
 
@@ -21,7 +21,7 @@ LLMFunctions.register({
     schema: z.object({}),
     handler: async (agent: Agent, args) => {
         let level = agent.bot!.health;
-        return `Health is at ${level} (${level * 5}%)`;
+        return { message: `Health is at ${level} (${level * 5}%)` };
     }
 })
 

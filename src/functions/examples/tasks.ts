@@ -197,9 +197,7 @@ LLMFunctions.register({
 	handler: async (agent: Agent, args) => {
 		let active_task = agent.llm.tasks.active();
 		if (!active_task) return "There is no active tasks!";
-		return {
-			message: active_task
-		}
+		return { message: active_task }
 	}
 })
 
@@ -210,7 +208,7 @@ LLMFunctions.register({
 	handler: async (agent: Agent, args) => {
 		let index = agent.llm.tasks.markCompleted();
 		if (index < 0) return `There is no active tasks to mark complete!`;
-		return `Task at index ${index} marked as completed`;
+		return { message: `Task at index ${index} marked as completed` };
 	}
 })
 
@@ -223,7 +221,7 @@ LLMFunctions.register({
 	handler: async (agent: Agent, args) => {
 		let task = agent.llm.tasks.markIncomplete(args.index);
 		if (!task) return `Task with index ${args.index} is not found!`;
-		return `Task '${task.title}' reverted to incomplete state`;
+		return { message: `Task '${task.title}' reverted to incomplete state` };
 	}
 })
 
@@ -248,7 +246,7 @@ LLMFunctions.register({
 	schema: z.object(),
 	handler: async (agent: Agent, args) => {
 		agent.llm.tasks.clear()
-		return "Task list is cleared";
+		return { message: "Task list is cleared" };
 	}
 })
 
@@ -266,7 +264,7 @@ LLMFunctions.register({
 	handler: async (agent: Agent, args) => {
 		if (args.tasks.length == 0) return "No task list provided!";
 		let indices = agent.llm.tasks.set(args.tasks);
-		return "Task list set. Task indices: " + JSON.stringify(indices);
+		return { message: "Task list set. Task indices: " + JSON.stringify(indices) };
 	}
 })
 
@@ -280,10 +278,8 @@ LLMFunctions.register({
 	}),
 	handler: async (agent: Agent, args) => {
 		let index = agent.llm.tasks.add(args);
-		if (index < 0) {
-			return `Failed to create a task`;
-		}
-		return `Task inserted at index ${index}`
+		if (index < 0) return `Failed to create a task`;
+		return { message: `Task inserted at index ${index}` }
 	}
 })
 
@@ -300,10 +296,8 @@ LLMFunctions.register({
 			title: args.title,
 			markdown: args.markdown
 		});
-		if (index < 0) {
-			return `Failed to create a task at index ${args.index}`;
-		}
-		return `Task inserted at index ${index}`
+		if (index < 0) return `Failed to create a task at index ${args.index}`;
+		return { message: `Task inserted at index ${index}` }
 	}
 })
 
@@ -316,7 +310,7 @@ LLMFunctions.register({
 	handler: async (agent: Agent, args) => {
 		let task = agent.llm.tasks.remove(args.index);
 		if (!task) return `Task with index ${args.index} is not found!`;
-		return `Task '${task.title}' at index ${args.index} is removed`
+		return { message: `Task '${task.title}' at index ${args.index} is removed` }
 	}
 })
 
@@ -333,7 +327,7 @@ LLMFunctions.register({
 		if (index < 0) {
 			return `Failed to create a task`;
 		}
-		return `Task inserted at index ${index}`
+		return { message: `Task inserted at index ${index}` }
 	}
 })
 
@@ -349,7 +343,7 @@ LLMFunctions.register({
 		if (index < 0) {
 			return `Failed to create a task`;
 		}
-		return `Task inserted at index ${index}`
+		return { message: `Task inserted at index ${index}` }
 	}
 })
 */

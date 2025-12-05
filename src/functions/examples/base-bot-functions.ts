@@ -7,13 +7,36 @@ import { goals } from "@miner-org/mineflayer-baritone"
 import { LLMFunctions } from "../llm-functions"
 import type { Agent } from "../../agent"
 
-export function getNearbyEntities(agent: Agent, maxDistance = 16) {
-    let entity_distances: { entity_id: string, entity: Entity, distance: number }[] = [];
+export interface NearbyEntityInfo {
+    entity_id: string,
+    distance: number,
+    direction: number,
+    entity: Entity
+}
+
+export function angleSubtract(a: number, b: number): number {
+  let d = a - b;
+  d = ((d + 180) % 360 + 360) % 360 - 180;
+  return d;
+}
+
+export function getNearbyEntities(agent: Agent, maxDistance: number = 100) {
+    let entity_distances: NearbyEntityInfo[] = [];
     for (const [entity_id, entity] of Object.entries(agent.bot!.entities)) {
         if (entity.username == agent.bot!.username) continue;
+
         const distance = entity.position.distanceTo(agent.bot!.entity.position);
-        if (distance > maxDistance) continue;
-        entity_distances.push({ entity_id, entity: entity as Entity, distance: distance });
+        if (maxDistance && distance > maxDistance) continue;
+
+        let diff = entity.position.subtract(agent.bot!.entity.position);
+        const direction = Math.atan2(diff.z, diff.y) * (180 / Math.PI); // horizontal direction
+
+        entity_distances.push({
+            entity_id,
+            distance,
+            direction: angleSubtract(direction, agent.bot!.entity.yaw),
+            entity
+        });
     }
     entity_distances.sort((a, b) => a.distance - b.distance);
     return entity_distances;
@@ -35,7 +58,7 @@ LLMFunctions.register({
             forceAdaptive: true, // Use smart waypoint system with failure handling
         });
 
-        return `Reached to (${args.x}, ${args.y}, ${args.z})`;
+        return { message: `Reached to (${args.x}, ${args.y}, ${args.z})` };
     }
 })
 
@@ -60,7 +83,7 @@ LLMFunctions.register({
             forceAdaptive: true, // Use smart waypoint system with failure handling
         });
 
-        return `Reached to ${args.entity_id} at (${pos.x}, ${pos.y}, ${pos.z})`;
+        return { message: `Reached to ${args.entity_id} at (${pos.x}, ${pos.y}, ${pos.z})` };
     }
 })
 
@@ -84,16 +107,17 @@ LLMFunctions.register({
 
 LLMFunctions.register({
     name: "get_nearby_entities",
-    description: "Get the nearby entities",
+    description: "Get the nearby entities. Returns list of: entity_id, distance (meters), direction (degrees, relative to bot's position and angle), entity_type, username (if player)",
     schema: z.object({
-        max_distance: z.number().describe("The maximum distance to search for entities. Use 1000 for unlimited distance.")
+        max_distance: z.number().min(20).max(1000).optional().describe("The maximum distance to search for entities. Default: 100")
     }),
     handler: async (agent: Agent, args) => {
         return {
-            message: getNearbyEntities(agent, args.max_distance).map(({ entity_id, entity, distance }) => ({
-                distance,
+            message: getNearbyEntities(agent, args.max_distance).map(({ entity_id, distance, direction, entity }) => ({
                 entity_id,
-                name: entity.name,
+                distance,
+                direction,
+                entity_type: entity.type,
                 ...(entity.username && { username: entity.username })
             }))
         }

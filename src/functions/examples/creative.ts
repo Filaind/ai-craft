@@ -21,15 +21,12 @@ LLMFunctions.register({
     }),
     handler: async (agent: Agent, args) => {
         const item = Data.itemsByName[args.item_id];
-        if (!item) {
-            return `Item ID ${args.item_id} is invalid!`;
-        }
+        if (!item) return `Item ID ${args.item_id} is invalid!`;
+
         const new_item = new Item(item.id, args.amount);
         const inventorySlot = agent.bot!.inventory.hotbarStart + agent.bot!.quickBarSlot;
         await agent.bot!.creative.setInventorySlot(inventorySlot, new_item)
-        return {
-            message: `${item?.displayName} is now in your hand`
-        }
+        return { message: `${item?.displayName} is now in your hand` }
     }
 })
 
@@ -47,10 +44,8 @@ LLMFunctions.register({
         ).describe("List of block coordinates to break").min(1).max(64)
     }),
     handler: async (agent: Agent, args) => {
+        if (args.blocks.length == 0) return "No block coordinates specified!";
         const mbot = agent.bot!;
-        if (args.blocks.length == 0) {
-            return "No block coordinates specified!";
-        }
         let dug = 0;
         for (let pos of args.blocks) {
             const vec = new Vec3(pos[0], pos[1], pos[2]);
@@ -62,10 +57,8 @@ LLMFunctions.register({
             await mbot.dig(block, true);
             dug++;
         }
-        if (dug == 0) {
-            return "No blocks were broken. All air?"
-        }
-        return `${dug} blocks were broken`;
+        if (dug == 0) return "No blocks were broken. All air?"
+        return { message: `${dug} blocks were broken` };
     }
 })
 
