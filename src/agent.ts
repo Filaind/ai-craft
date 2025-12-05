@@ -9,7 +9,8 @@ import { translateMessage } from './utils/translator';
 
 export class Agent {
     public bot?: mineflayer.Bot;
-    private llm: LLMExtension;
+    public readonly llm: LLMExtension;
+
     private messagePushed: boolean = false;
     private msgDebounceTimer: NodeJS.Timeout | null = null;
 
@@ -69,6 +70,8 @@ export class Agent {
         if (entity) {
             console.log("Nearest entity", entity.name);
         }
+
+        this.llm.pushSystemPrompt();
     }
 
     async onChatMessage(username: string, message: string) {
