@@ -48,7 +48,14 @@ function parseStructure(structure: string): MinecraftStructure | string {
         structure: []
     };
 
-    let lines = structure.toLowerCase().split('\n')
+    // some cleanup
+    structure = structure.toLowerCase();
+    let te = structure.indexOf("</think>");
+    if (te >= 0) {
+        structure = structure.substring(te + 8);
+    }
+
+    let lines = structure.split('\n')
     let y: number = -1, z: number = -1;
 
     for (let line of lines) {
