@@ -92,9 +92,14 @@ export class Agent {
         this.msgDebounceTimer = setTimeout(async () => {
             if (this.messagePushed) {
                 this.messagePushed = false;
-                
-                const response = await this.llm.getResponse();
-                this.sendChatMessage(response);
+
+                const forAssistant = await this.llm.isMessageAddressedToMe();
+                if (forAssistant) {
+                    const response = await this.llm.getResponse();
+                    this.sendChatMessage(response);
+                } else {
+                    console.log("Last message is not for assistant");
+                }
             }
             this.msgDebounceTimer = null;
         }, 3000);

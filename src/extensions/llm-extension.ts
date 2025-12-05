@@ -174,7 +174,7 @@ export class LLMExtension extends BaseAgentExtension {
 
         logger.debug(`[LLM] Messages to analyze: ${messages.map((message) => message.content).join('\n')}`);
         const response = await this.client.chat.completions.create({
-            model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
+            model: this.model,
             messages: messages,
 
             // force model to call isLastMessageForMeTool 
@@ -205,11 +205,7 @@ export class LLMExtension extends BaseAgentExtension {
         return false;
     }
 
-    async getResponse(newMessage?: string, username?: string): Promise<string> {
-        if (newMessage) {
-            this.pushChatMessage(newMessage, username);
-        }
-
+    async getResponse(): Promise<string> {
         logger.info('[LLM] Starting request');
         const startTime = Date.now();
         try {
