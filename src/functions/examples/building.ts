@@ -31,7 +31,7 @@ Where:
 S,x,y,z - size of structure
 Y - index of current horizontal 2D slice, starting from the bottom
 Z - horizontal stripe of block_ids in the current slice
-block_id - minecraft block id
+block_id - minecraft block id with no "minecraft:" tag
 E - end of the structure
 
 We MUST have 'y' number of layers
@@ -49,7 +49,7 @@ function parseStructure(structure: string): MinecraftStructure | string {
     let y: number = -1, z: number = -1;
 
     for (let line of lines) {
-        let args = line.split(',');
+        let args = line.trim().split(',');
         if (args.length == 0) {
             continue; // skip empty lines
         }
@@ -93,7 +93,8 @@ function parseStructure(structure: string): MinecraftStructure | string {
             case 'e':
                 return ret; // done!
             default:
-                return `Invalid line: ${line}`;
+                break;
+                //return `Invalid line: ${line}`;
         }
     }
     return ret;
@@ -120,8 +121,9 @@ async function generateStructure(agent: Agent, description: string): Promise<Min
                         role: "user",
                         content: ret
                     })
+                } else {
+                    return ret;
                 }
-                return ret;
             } catch (e) {
                 messages.push({
                     role: "user",

@@ -212,7 +212,7 @@ export class LLMExtension extends BaseAgentExtension {
             //temperature: this.temperature,
             messages: messages,
             parallel_tool_calls: false,
-            reasoning_effort: "high"
+            reasoning_effort: "medium"
         });
     }
 
