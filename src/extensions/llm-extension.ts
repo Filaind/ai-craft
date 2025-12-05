@@ -208,8 +208,8 @@ export class LLMExtension extends BaseAgentExtension {
     async generateSimple(messages: OpenAI.ChatCompletionMessageParam[]): Promise<OpenAI.ChatCompletion> {
         return await this.client.chat.completions.create({
             model: this.model,
-            tool_choice: "none",
-            temperature: this.temperature,
+            //tool_choice: "none",
+            //temperature: this.temperature,
             messages: messages,
             parallel_tool_calls: false,
             reasoning_effort: "high"

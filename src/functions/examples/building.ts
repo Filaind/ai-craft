@@ -152,14 +152,15 @@ LLMFunctions.register({
                 message: structure
             }
         }
-        for (let y = 0; y < structure.size.x; y++) {
-            for (let z = 0; z < structure.size.x; z++) {
+        for (let y = 0; y < structure.size.y; y++) {
+            for (let z = 0; z < structure.size.z; z++) {
                 for (let x = 0; x < structure.size.x; x++) {
                     agent.bot!.chat(`/setblock ${args.origin.x + x} ${args.origin.y + y} ${args.origin.z + z} ${structure.structure[y]![z]![x]!}`)
                 }
             }
         }
         return {
+            result: "success",
             message: "Structure is generated!"
         }
     }
