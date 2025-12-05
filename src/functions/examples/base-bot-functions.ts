@@ -10,7 +10,7 @@ import type { Agent } from "../../agent"
 export interface NearbyEntityInfo {
     entity_id: string,
     distance: number,
-    direction: number,
+    //direction: number,
     entity: Entity
 }
 
@@ -28,13 +28,13 @@ export function getNearbyEntities(agent: Agent, maxDistance: number = 100) {
         const distance = entity.position.distanceTo(agent.bot!.entity.position);
         if (maxDistance && distance > maxDistance) continue;
 
-        let diff = entity.position.subtract(agent.bot!.entity.position);
-        const direction = Math.atan2(diff.z, diff.y) * (180 / Math.PI); // horizontal direction
+        //let diff = entity.position.subtract(agent.bot!.entity.position);
+        //const direction = Math.atan2(diff.z, diff.y) * (180 / Math.PI); // horizontal direction
 
         entity_distances.push({
             entity_id,
             distance,
-            direction: angleSubtract(direction, agent.bot!.entity.yaw),
+            //direction: angleSubtract(direction, agent.bot!.entity.yaw),
             entity
         });
     }
@@ -107,16 +107,16 @@ LLMFunctions.register({
 
 LLMFunctions.register({
     name: "get_nearby_entities",
-    description: "Get the nearby entities. Returns list of: entity_id, distance (meters), direction (degrees, relative to bot's position and angle), entity_type, username (if player)",
+    description: "Get the nearby entities. Returns list of: entity_id, distance (meters), entity_type, username (if player)",
     schema: z.object({
         max_distance: z.number().min(20).max(1000).optional().describe("The maximum distance to search for entities. Default: 100")
     }),
     handler: async (agent: Agent, args) => {
         return {
-            message: getNearbyEntities(agent, args.max_distance).map(({ entity_id, distance, direction, entity }) => ({
+            message: getNearbyEntities(agent, args.max_distance).map(({ entity_id, distance, entity }) => ({
                 entity_id,
                 distance,
-                direction,
+                //direction,
                 entity_type: entity.type,
                 ...(entity.username && { username: entity.username })
             }))

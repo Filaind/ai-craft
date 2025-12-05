@@ -56,7 +56,7 @@ function formatString(template: string, values: Record<string, any>): string {
 }
 
 export class LLMExtension extends BaseAgentExtension {
-    private client: OpenAI;
+    private readonly client: OpenAI;
     private messages: ChatMessage[] = [];
     private functionCallHistory: string[] = [];
 
@@ -179,8 +179,8 @@ export class LLMExtension extends BaseAgentExtension {
 
             // force model to call isLastMessageForMeTool 
             tools: [ isLastMessageForMeTool ],
-            tool_choice: { type: "function", function: { name: isLastMessageForMeTool.function.name } },
-            //tool_choice: "required"
+            //tool_choice: { type: "function", function: { name: isLastMessageForMeTool.function.name } },
+            tool_choice: "required"
         });
         const message = response.choices[0]?.message;
         if (message) {
@@ -203,6 +203,17 @@ export class LLMExtension extends BaseAgentExtension {
             return message.content!.includes("true");
         }
         return false;
+    }
+
+    async generateSimple(messages: OpenAI.ChatCompletionMessageParam[]): Promise<OpenAI.ChatCompletion> {
+        return await this.client.chat.completions.create({
+            model: this.model,
+            tool_choice: "none",
+            temperature: this.temperature,
+            messages: messages,
+            parallel_tool_calls: false,
+            reasoning_effort: "high"
+        });
     }
 
     async getResponse(): Promise<string> {
@@ -263,6 +274,7 @@ export class LLMExtension extends BaseAgentExtension {
                             logger.debug({ ret }, `[Tool call] Result: `);
 
                             this.messages.push({
+                                name: this.agent.bot!.username,
                                 role: "assistant",
                                 content: choice.message.content || "",
                                 tool_calls: [ tool_call ]
@@ -307,6 +319,7 @@ export class LLMExtension extends BaseAgentExtension {
                     //@ts-ignore
                     if (choice.message.role == "assistant" && choice.message.content == null) {
                         this.messages.push({
+                            name: this.agent.bot!.username,
                             role: "assistant",
                             //@ts-ignore
                             content: choice.message.reasoning!
@@ -317,6 +330,7 @@ export class LLMExtension extends BaseAgentExtension {
 
 
                     this.messages.push({
+                        name: this.agent.bot!.username,
                         role: "assistant",
                         content: choice.message.content!
                     })
